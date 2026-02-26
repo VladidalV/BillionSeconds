@@ -1,24 +1,23 @@
 package com.example.billionseconds.util
 
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 object DateTimeFormatter {
 
-    fun formatInstant(instant: Instant): String {
+    fun formatInstant(instant: kotlinx.datetime.Instant): String {
         val timeZone = TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(timeZone)
         return "${localDateTime.date} ${localDateTime.time}"
     }
 
-    fun formatInstantWithTimezone(instant: Instant): String {
+    fun formatInstantWithTimezone(instant: kotlinx.datetime.Instant): String {
         val timeZone = TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(timeZone)
         return "${localDateTime.date} ${localDateTime.time} (System timezone)"
     }
 
-    fun formatRelativeTime(instant: Instant): String {
+    fun formatRelativeTime(instant: kotlinx.datetime.Instant): String {
         val now = getCurrentInstant()
         val isPast = now > instant
         
@@ -45,12 +44,12 @@ object DateTimeFormatter {
         }
     }
 
-    private fun toSeconds(instant: Instant): Long {
+    private fun toSeconds(instant: kotlinx.datetime.Instant): Long {
         val millis = instant.toEpochMilliseconds()
         return millis / 1000
     }
 
-    fun formatDetailedResult(billionSecondsInstant: Instant, birthInstant: Instant): String {
+    fun formatDetailedResult(billionSecondsInstant: kotlinx.datetime.Instant, birthInstant: kotlinx.datetime.Instant): String {
         val formattedDate = formatInstantWithTimezone(billionSecondsInstant)
         val relativeTime = formatRelativeTime(billionSecondsInstant)
         

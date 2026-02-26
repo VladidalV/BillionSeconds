@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 
 class BirthdayStore(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob())
 ) {
     private val _state = MutableStateFlow(BirthdayState())
+    private val currentState = _state.value
     val state: StateFlow<BirthdayState> = _state.asStateFlow()
 
     private val calculator: BillionSecondsCalculator = BillionSecondsCalculator
