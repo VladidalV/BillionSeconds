@@ -2,8 +2,6 @@ package com.example.billionseconds.domain
 
 import com.example.billionseconds.util.getCurrentInstant
 import com.example.billionseconds.util.localDateTimeToInstant
-import com.example.billionseconds.util.plusSeconds
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
@@ -15,12 +13,15 @@ object BillionSecondsCalculator {
     fun calculateBillionSeconds(
         birthDate: LocalDate,
         birthTime: LocalTime
-    ): Instant {
+    ): kotlinx.datetime.Instant {
         val timeZone = TimeZone.currentSystemDefault()
         val birthInstant = localDateTimeToInstant(birthDate, birthTime, timeZone)
-        val billionSecondsInstant = birthInstant.plusSeconds(BILLION_SECONDS)
         
-        return billionSecondsInstant
+        val billionSecondsMillis = BILLION_SECONDS * 1000
+        val birthMillis = birthInstant.toEpochMilliseconds()
+        val billionSecondsMillisInstant = birthMillis + billionSecondsMillis
+        
+        return kotlinx.datetime.Instant.fromEpochMilliseconds(billionSecondsMillisInstant)
     }
 
     fun isBillionSecondsReached(
