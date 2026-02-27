@@ -14,7 +14,7 @@ object DateTimeFormatter {
     fun formatInstantWithTimezone(instant: kotlinx.datetime.Instant): String {
         val timeZone = TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(timeZone)
-        return "${localDateTime.date} ${localDateTime.time} (System timezone)"
+        return "${localDateTime.date} ${localDateTime.time} (Системный часовой пояс)"
     }
 
     fun formatRelativeTime(instant: kotlinx.datetime.Instant): String {
@@ -36,11 +36,11 @@ object DateTimeFormatter {
         val minutes = remainingMinutes / 60
         
         return when {
-            isPast -> "Reached $days days $hours hours ago!"
-            days > 0L -> "$days days, $hours hours, $minutes minutes until billion seconds!"
-            hours > 0L -> "$hours hours, $minutes minutes until billion seconds!"
-            minutes > 0L -> "$minutes minutes until billion seconds!"
-            else -> "Billion seconds will be reached in less than a minute!"
+            isPast -> "Достигнуто $days дней $hours часов назад!"
+            days > 0L -> "$days дней, $hours часов, $minutes минут до миллиарда секунд!"
+            hours > 0L -> "$hours часов, $minutes минут до миллиарда секунд!"
+            minutes > 0L -> "$minutes минут до миллиарда секунд!"
+            else -> "Миллиард секунд будет достигнут менее чем через минуту!"
         }
     }
 
@@ -49,10 +49,12 @@ object DateTimeFormatter {
         return millis / 1000
     }
 
-    fun formatDetailedResult(billionSecondsInstant: kotlinx.datetime.Instant, birthInstant: kotlinx.datetime.Instant): String {
+    fun formatDetailedResult(
+        billionSecondsInstant: kotlinx.datetime.Instant,
+        birthInstant: kotlinx.datetime.Instant
+    ): String {
         val formattedDate = formatInstantWithTimezone(billionSecondsInstant)
         val relativeTime = formatRelativeTime(billionSecondsInstant)
-        
-        return "1,000,000,000 seconds from your birth: $formattedDate\n$relativeTime"
+        return "1 000 000 000 секунд с момента вашего рождения: $formattedDate\n$relativeTime"
     }
 }

@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_title">Калькулятор миллиарда секунд</string>
+    <string name="birth_date">Дата рождения</string>
+    <string name="birth_time">Время рождения</string>
+    <string name="select_date">Выбрать дату</string>
+    <string name="select_time">Выбрать время</string>
+    <string name="selected">Выбрано: %s</string>
+    <string name="calculating">Вычисление...</string>
+    <string name="calculate_billion_seconds">Вычислить миллиард секунд</string>
+    <string name="billion_seconds_moment">🎉 Момент миллиарда секунд:</string>
+    <string name="year">Год</string>
+    <string name="month">Месяц</string>
+    <string name="day">День</string>
+    <string name="hour">Час</string>
+    <string name="minute">Минута</string>
+    <string name="second">Секунда</string>
+    <string name="seconds_from_birth">1 000 000 000 секунд с момента вашего рождения: %s\n%s</string>
+    <string name="system_timezone">(Системный часовой пояс)</string>
+    <string name="reached_ago">Достигнуто %d дней %d часов назад!</string>
+    <string name="days_until_billion">%d дней, %d часов, %d минут до миллиарда секунд!</string>
+    <string name="hours_until_billion">%d часов, %d минут до миллиарда секунд!</string>
+    <string name="minutes_until_billion">%d минут до миллиарда секунд!</string>
+    <string name="less_than_minute">Миллиард секунд будет достигнут менее чем через минуту!</string>
+</resources>

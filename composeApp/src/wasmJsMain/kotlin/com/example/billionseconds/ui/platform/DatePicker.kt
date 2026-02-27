@@ -43,19 +43,19 @@ actual fun BirthdayDatePicker(
             TextField(
                 value = yearInput,
                 onValueChange = { yearInput = it },
-                label = { Text("Year") },
+                label = { Text("Год") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
             TextField(
                 value = monthInput,
                 onValueChange = { monthInput = it },
-                label = { Text("Month") },
+                label = { Text("Месяц") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
             TextField(
                 value = dayInput,
                 onValueChange = { dayInput = it },
-                label = { Text("Day") },
+                label = { Text("День") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
         }
@@ -72,13 +72,12 @@ actual fun BirthdayDatePicker(
                         state.selectedDate.value = localDate
                         onDateSelected(localDate)
                     } catch (e: Exception) {
-                        // Invalid date, ignore
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text(state.selectedDate.value?.toString() ?: "Select Date")
+            Text(state.selectedDate.value?.toString() ?: "Выбрать дату")
         }
     }
 }

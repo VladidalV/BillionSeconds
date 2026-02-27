@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_title">Billion Seconds Calculator</string>
+    <string name="birth_date">Birth Date</string>
+    <string name="birth_time">Birth Time</string>
+    <string name="selected">Selected: %s</string>
+    <string name="calculating">Calculating...</string>
+    <string name="calculate_billion_seconds">Calculate Billion Seconds</string>
+    <string name="billion_seconds_moment">🎉 Billion Seconds Moment:</string>
+    <string name="select_date">Select Date</string>
+    <string name="select_time">Select Time</string>
+    <string name="year">Year</string>
+    <string name="month">Month</string>
+    <string name="day">Day</string>
+    <string name="hour">Hour</string>
+    <string name="minute">Minute</string>
+    <string name="second">Second</string>
+    <string name="seconds_from_birth">1,000,000,000 seconds from your birth: %s\n%s</string>
+    <string name="system_timezone">(System timezone)</string>
+    <string name="reached_ago">Reached %d days %d hours ago!</string>
+    <string name="days_until_billion">%d days, %d hours, %d minutes until billion seconds!</string>
+    <string name="hours_until_billion">%d hours, %d minutes until billion seconds!</string>
+    <string name="minutes_until_billion">%d minutes until billion seconds!</string>
+    <string name="less_than_minute">Billion seconds will be reached in less than a minute!</string>
+</resources>

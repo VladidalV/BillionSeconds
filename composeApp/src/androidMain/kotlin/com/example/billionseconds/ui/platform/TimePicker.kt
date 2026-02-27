@@ -47,7 +47,7 @@ actual fun BirthdayTimePicker(
             },
             12,
             0,
-            true // is24HourView
+            true
         )
         timePickerDialog.show()
     }
@@ -57,7 +57,7 @@ actual fun BirthdayTimePicker(
             onClick = { showDialog = true },
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text(state.selectedTime.value?.toString() ?: "Select Time")
+            Text(state.selectedTime.value?.toString() ?: "Выбрать время")
         }
     }
 }

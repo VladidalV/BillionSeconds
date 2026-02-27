@@ -52,7 +52,7 @@ fun BirthdayScreen(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "Billion Seconds Calculator",
+                text = "Калькулятор миллиарда секунд",
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )
@@ -101,7 +101,7 @@ private fun DateSection(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Birth Date",
+                text = "Дата рождения",
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -113,7 +113,7 @@ private fun DateSection(
             
             state.birthDate?.let { date ->
                 Text(
-                    text = "Selected: $date",
+                    text = "Выбрано: $date",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -135,7 +135,7 @@ private fun TimeSection(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Birth Time",
+                text = "Время рождения",
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -147,7 +147,7 @@ private fun TimeSection(
             
             state.birthTime?.let { time ->
                 Text(
-                    text = "Selected: $time",
+                    text = "Выбрано: $time",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -168,9 +168,9 @@ private fun CalculateButton(
         modifier = Modifier.fillMaxWidth().height(50.dp)
     ) {
         if (isLoading) {
-            Text("Calculating...")
+            Text("Вычисление...")
         } else {
-            Text("Calculate Billion Seconds")
+            Text("Вычислить миллиард секунд")
         }
     }
 }
@@ -197,7 +197,7 @@ private fun ResultSection(state: com.example.billionseconds.mvi.BirthdayState) {
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = "🎉 Billion Seconds Moment:",
+                    text = "🎉 Момент миллиарда секунд:",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))

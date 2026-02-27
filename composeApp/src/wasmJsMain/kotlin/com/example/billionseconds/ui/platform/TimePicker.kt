@@ -43,19 +43,19 @@ actual fun BirthdayTimePicker(
             TextField(
                 value = hourInput,
                 onValueChange = { hourInput = it },
-                label = { Text("Hour") },
+                label = { Text("Час") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
             TextField(
                 value = minuteInput,
                 onValueChange = { minuteInput = it },
-                label = { Text("Minute") },
+                label = { Text("Минута") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
             TextField(
                 value = secondInput,
                 onValueChange = { secondInput = it },
-                label = { Text("Second") },
+                label = { Text("Секунда") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
         }
@@ -75,7 +75,7 @@ actual fun BirthdayTimePicker(
             },
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text(state.selectedTime.value?.toString() ?: "Select Time")
+            Text(state.selectedTime.value?.toString() ?: "Выбрать время")
         }
     }
 }

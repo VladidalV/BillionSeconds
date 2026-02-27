@@ -43,19 +43,19 @@ actual fun BirthdayDatePicker(
             TextField(
                 value = yearInput,
                 onValueChange = { yearInput = it },
-                label = { Text("Year") },
+                label = { Text("Год") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
             TextField(
                 value = monthInput,
                 onValueChange = { monthInput = it },
-                label = { Text("Month") },
+                label = { Text("Месяц") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
             TextField(
                 value = dayInput,
                 onValueChange = { dayInput = it },
-                label = { Text("Day") },
+                label = { Text("День") },
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
         }
@@ -72,68 +72,12 @@ actual fun BirthdayDatePicker(
                         state.selectedDate.value = localDate
                         onDateSelected(localDate)
                     } catch (e: Exception) {
-                        // Invalid date, ignore
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text(state.selectedDate.value?.toString() ?: "Select Date")
-        }
-    }
-}
-
-@Composable
-actual fun BirthdayDatePicker(
-    state: DatePickerState,
-    onDateSelected: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var yearInput by remember { mutableStateOf("2000") }
-    var monthInput by remember { mutableStateOf("1") }
-    var dayInput by remember { mutableStateOf("1") }
-
-    Column(modifier = modifier) {
-        Row {
-            TextField(
-                value = yearInput,
-                onValueChange = { yearInput = it },
-                label = { Text("Year") },
-                modifier = Modifier.weight(1f).padding(4.dp)
-            )
-            TextField(
-                value = monthInput,
-                onValueChange = { monthInput = it },
-                label = { Text("Month") },
-                modifier = Modifier.weight(1f).padding(4.dp)
-            )
-            TextField(
-                value = dayInput,
-                onValueChange = { dayInput = it },
-                label = { Text("Day") },
-                modifier = Modifier.weight(1f).padding(4.dp)
-            )
-        }
-        Button(
-            onClick = {
-                val year = yearInput.toIntOrNull()
-                val month = monthInput.toIntOrNull()
-                val day = dayInput.toIntOrNull()
-                
-                if (year != null && month != null && day != null &&
-                    month in 1..12 && day in 1..31) {
-                    try {
-                        val localDate = LocalDate(year, month, day)
-                        state.selectedDate.value = localDate
-                        onDateSelected(localDate)
-                    } catch (e: Exception) {
-                        // Invalid date, ignore
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp)
-        ) {
-            Text(state.selectedDate.value?.toString() ?: "Select Date")
+            Text(state.selectedDate.value?.toString() ?: "Выбрать дату")
         }
     }
 }
