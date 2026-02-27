@@ -102,7 +102,7 @@ class BirthdayStore(
                         time = currentState.birthTime,
                         timeZone = TimeZone.currentSystemDefault()
                     )
-                    
+
                     val resultText = formatter.formatDetailedResult(
                         billionSecondsInstant = billionSecondsInstant,
                         birthInstant = birthInstant

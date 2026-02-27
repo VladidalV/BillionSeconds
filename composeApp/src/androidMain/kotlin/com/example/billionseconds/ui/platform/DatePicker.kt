@@ -64,7 +64,7 @@ actual fun BirthdayDatePicker(
             onClick = { showDialog = true },
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text(state.selectedDate.value?.toString() ?: "Select Date")
+            Text(state.selectedDate.value?.toString() ?: "Выбрать дату")
         }
     }
 }
