@@ -21,7 +21,8 @@
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache)",
       "Bash(./gradlew :composeApp:compileKotlinJs :composeApp:compileKotlinWasmJs --no-configuration-cache)",
       "Bash(./gradlew :composeApp:allTests --no-configuration-cache)",
-      "Bash(./gradlew :composeApp:jsBrowserTest --no-configuration-cache)"
+      "Bash(./gradlew :composeApp:jsBrowserTest --no-configuration-cache)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:compileKotlinIosSimulatorArm64 :composeApp:compileKotlinWasmJs --no-configuration-cache)"
     ]
   }
 }
