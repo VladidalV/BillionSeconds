@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree:*)",
+      "Bash(./gradlew :composeApp:compileKotlinAndroid)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid)",
+      "Bash(./gradlew :composeApp:compileKotlinIosSimulatorArm64)",
+      "Bash(./gradlew :composeApp:compileTestKotlinJvm)",
+      "Bash(./gradlew :composeApp:dependencies --configuration iosSimulatorArm64MainImplementation)",
+      "Bash(./gradlew :composeApp:compileKotlinIosSimulatorArm64 --info)",
+      "Bash(./gradlew :composeApp:compileKotlinIosSimulatorArm64 --stacktrace)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata --refresh-dependencies)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata --no-build-cache)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata --no-configuration-cache --no-build-cache)",
+      "Bash(jar tf:*)",
+      "Bash(unzip -p ~/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-datetime/0.7.1/7c3cee64f7635f0e4d89c6b57607bd8aca881b07/kotlinx-datetime-metadata-0.7.1.jar META-INF/kotlin-project-structure-metadata.json)",
+      "Bash(python3 -m json.tool)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata --no-configuration-cache)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:compileKotlinIosSimulatorArm64)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache)",
+      "Bash(./gradlew :composeApp:compileKotlinJs :composeApp:compileKotlinWasmJs --no-configuration-cache)",
+      "Bash(./gradlew :composeApp:allTests --no-configuration-cache)",
+      "Bash(./gradlew :composeApp:jsBrowserTest --no-configuration-cache)"
+    ]
+  }
+}

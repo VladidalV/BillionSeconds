@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Billion Seconds</string>
+    <string name="enter_birthday">Enter your birthday</string>
+    <string name="day">Day</string>
+    <string name="month">Month</string>
+    <string name="year">Year</string>
+    <string name="hour">Hour</string>
+    <string name="minute">Minute</string>
+    <string name="calculate">Calculate</string>
+    <string name="your_milestone">Your billion-second moment</string>
+    <string name="time_remaining">Time remaining</string>
+    <string name="seconds_left">seconds left</string>
+    <string name="congratulations">Congratulations!</string>
+    <string name="milestone_reached">You have lived a billion seconds!</string>
+    <string name="change_date">Change date</string>
+    <string name="milestone_date">Milestone date</string>
+    <string name="optional_time">Time (optional)</string>
+</resources>
