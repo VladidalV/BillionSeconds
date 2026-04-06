@@ -1,12 +1,15 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.example.billionseconds.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.interop.UIKitView
 import androidx.compose.ui.unit.dp
+import platform.Foundation.*
+import platform.UIKit.*
 
 @Composable
 actual fun DateInputSection(
@@ -16,61 +19,51 @@ actual fun DateInputSection(
     onDateChanged: (year: Int, month: Int, day: Int) -> Unit,
     modifier: Modifier
 ) {
-    var dayText by remember { mutableStateOf(day?.toString() ?: "") }
-    var monthText by remember { mutableStateOf(month?.toString() ?: "") }
-    var yearText by remember { mutableStateOf(year?.toString() ?: "") }
+    var showPicker by remember { mutableStateOf(false) }
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    val label = if (year != null && month != null && day != null) {
+        "${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.$year"
+    } else {
+        "Выбрать дату рождения"
+    }
+
+    OutlinedButton(
+        onClick = { showPicker = true },
         modifier = modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
-            value = dayText,
-            onValueChange = { v ->
-                if (v.length <= 2) {
-                    dayText = v
-                    val d = v.toIntOrNull() ?: return@OutlinedTextField
-                    val m = monthText.toIntOrNull() ?: return@OutlinedTextField
-                    val y = yearText.toIntOrNull()?.takeIf { it >= 1000 } ?: return@OutlinedTextField
+        Text("📅  $label")
+    }
+
+    if (showPicker) {
+        val datePicker = remember {
+            UIDatePicker().apply {
+                datePickerMode = UIDatePickerMode.UIDatePickerModeDate
+                preferredDatePickerStyle = UIDatePickerStyle.UIDatePickerStyleWheels
+                maximumDate = NSDate()
+                date = nsDateFrom(year, month, day)
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val (y, m, d) = extractDate(datePicker.date)
                     onDateChanged(y, m, d)
-                }
+                    showPicker = false
+                }) { Text("OK") }
             },
-            label = { Text("День") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = monthText,
-            onValueChange = { v ->
-                if (v.length <= 2) {
-                    monthText = v
-                    val d = dayText.toIntOrNull() ?: return@OutlinedTextField
-                    val m = v.toIntOrNull() ?: return@OutlinedTextField
-                    val y = yearText.toIntOrNull()?.takeIf { it >= 1000 } ?: return@OutlinedTextField
-                    onDateChanged(y, m, d)
-                }
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Отмена") }
             },
-            label = { Text("Месяц") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = yearText,
-            onValueChange = { v ->
-                if (v.length <= 4) {
-                    yearText = v
-                    val d = dayText.toIntOrNull() ?: return@OutlinedTextField
-                    val m = monthText.toIntOrNull() ?: return@OutlinedTextField
-                    val y = v.toIntOrNull()?.takeIf { it >= 1000 } ?: return@OutlinedTextField
-                    onDateChanged(y, m, d)
-                }
-            },
-            label = { Text("Год") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(2f),
-            singleLine = true
+            text = {
+                UIKitView(
+                    factory = { datePicker },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                )
+            }
         )
     }
 }
@@ -82,38 +75,92 @@ actual fun TimeInputSection(
     onTimeChanged: (hour: Int, minute: Int) -> Unit,
     modifier: Modifier
 ) {
-    var hourText by remember { mutableStateOf(if (hour == 0) "" else hour.toString()) }
-    var minuteText by remember { mutableStateOf(if (minute == 0) "" else minute.toString()) }
+    var showPicker by remember { mutableStateOf(false) }
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    val label = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
+
+    OutlinedButton(
+        onClick = { showPicker = true },
         modifier = modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
-            value = hourText,
-            onValueChange = { v ->
-                if (v.length <= 2) {
-                    hourText = v
-                    onTimeChanged(v.toIntOrNull() ?: 0, minuteText.toIntOrNull() ?: 0)
-                }
+        Text("🕐  $label")
+    }
+
+    if (showPicker) {
+        val timePicker = remember {
+            UIDatePicker().apply {
+                datePickerMode = UIDatePickerMode.UIDatePickerModeTime
+                preferredDatePickerStyle = UIDatePickerStyle.UIDatePickerStyleWheels
+                date = nsTimeFrom(hour, minute)
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val (h, m) = extractTime(timePicker.date)
+                    onTimeChanged(h, m)
+                    showPicker = false
+                }) { Text("OK") }
             },
-            label = { Text("Час") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = minuteText,
-            onValueChange = { v ->
-                if (v.length <= 2) {
-                    minuteText = v
-                    onTimeChanged(hourText.toIntOrNull() ?: 0, v.toIntOrNull() ?: 0)
-                }
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Отмена") }
             },
-            label = { Text("Минута") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f),
-            singleLine = true
+            text = {
+                UIKitView(
+                    factory = { timePicker },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                )
+            }
         )
     }
+}
+
+private fun nsDateFrom(year: Int?, month: Int?, day: Int?): NSDate {
+    val cal = NSCalendar.currentCalendar
+    val currentYear = cal.components(NSCalendarUnitYear, NSDate()).year
+    val comps = NSDateComponents().apply {
+        this.year   = year?.toLong()  ?: (currentYear - 30L)
+        this.month  = month?.toLong() ?: 6L
+        this.day    = day?.toLong()   ?: 15L
+        this.hour   = 0L
+        this.minute = 0L
+        this.second = 0L
+    }
+    return cal.dateFromComponents(comps) ?: NSDate()
+}
+
+private fun nsTimeFrom(hour: Int, minute: Int): NSDate {
+    val cal = NSCalendar.currentCalendar
+    val today = cal.components(
+        NSCalendarUnitYear or NSCalendarUnitMonth or NSCalendarUnitDay,
+        NSDate()
+    )
+    val comps = NSDateComponents().apply {
+        this.year   = today.year
+        this.month  = today.month
+        this.day    = today.day
+        this.hour   = hour.toLong()
+        this.minute = minute.toLong()
+        this.second = 0L
+    }
+    return cal.dateFromComponents(comps) ?: NSDate()
+}
+
+private fun extractDate(date: NSDate): Triple<Int, Int, Int> {
+    val cal = NSCalendar.currentCalendar
+    val c = cal.components(
+        NSCalendarUnitYear or NSCalendarUnitMonth or NSCalendarUnitDay,
+        date
+    )
+    return Triple(c.year.toInt(), c.month.toInt(), c.day.toInt())
+}
+
+private fun extractTime(date: NSDate): Pair<Int, Int> {
+    val cal = NSCalendar.currentCalendar
+    val c = cal.components(NSCalendarUnitHour or NSCalendarUnitMinute, date)
+    return Pair(c.hour.toInt(), c.minute.toInt())
 }
