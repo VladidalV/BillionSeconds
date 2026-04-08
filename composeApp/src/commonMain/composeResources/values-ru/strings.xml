@@ -1,19 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Миллиард секунд</string>
+
+    <!-- Онбординг Экран 1 -->
+    <string name="onboarding_title">Каждый человек проживает 1 000 000 000 секунд</string>
+    <string name="onboarding_subtitle">Это случается только один раз</string>
+    <string name="onboarding_start">Начать</string>
+
+    <!-- Онбординг Экран 2 -->
     <string name="enter_birthday">Введите дату рождения</string>
+    <string name="optional_time">Время (необязательно)</string>
+    <string name="unknown_time">Не знаю точное время рождения</string>
+    <string name="calculate">Рассчитать</string>
+    <string name="error_date_required">Введите дату рождения</string>
+    <string name="error_date_future">Дата рождения не может быть в будущем</string>
+    <string name="error_date_invalid">Некорректная дата</string>
+    <string name="error_year_out_of_range">Некорректный год (минимум 1900)</string>
+
+    <!-- Онбординг Экран 3 -->
+    <string name="your_milestone">Ваш момент миллиарда секунд</string>
+    <string name="onboarding_progress_label">Прогресс</string>
+    <string name="onboarding_approximate_note">* Время приблизительное (время рождения неизвестно)</string>
+    <string name="onboarding_continue">Продолжить</string>
+
+    <!-- Основное приложение -->
     <string name="day">День</string>
     <string name="month">Месяц</string>
     <string name="year">Год</string>
     <string name="hour">Час</string>
     <string name="minute">Минута</string>
-    <string name="calculate">Рассчитать</string>
-    <string name="your_milestone">Ваш момент миллиарда секунд</string>
     <string name="time_remaining">Осталось</string>
     <string name="seconds_left">секунд</string>
     <string name="congratulations">Поздравляем!</string>
     <string name="milestone_reached">Вы прожили миллиард секунд!</string>
     <string name="change_date">Изменить дату</string>
     <string name="milestone_date">Дата события</string>
-    <string name="optional_time">Время (необязательно)</string>
 </resources>

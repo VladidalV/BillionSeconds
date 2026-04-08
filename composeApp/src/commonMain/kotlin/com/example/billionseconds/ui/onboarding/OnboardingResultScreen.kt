@@ -1,8 +1,10 @@
-package com.example.billionseconds.ui
+package com.example.billionseconds.ui.onboarding
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -10,12 +12,13 @@ import androidx.compose.ui.unit.dp
 import billionseconds.composeapp.generated.resources.*
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.AppState
+import com.example.billionseconds.ui.components.MilestoneProgressBar
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun ResultScreen(
+fun OnboardingResultScreen(
     state: AppState,
     onIntent: (AppIntent) -> Unit,
     modifier: Modifier = Modifier
@@ -23,29 +26,47 @@ fun ResultScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         if (state.isMilestoneReached) {
-            CelebrationContent()
+            OnboardingCelebrationContent()
         } else {
-            CountdownContent(state)
+            OnboardingMilestoneContent(state)
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        MilestoneProgressBar(
+            progress = state.progressPercent,
+            label = stringResource(Res.string.onboarding_progress_label)
+        )
+
+        if (state.unknownTime) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(Res.string.onboarding_approximate_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
 
         Spacer(Modifier.height(40.dp))
 
-        OutlinedButton(
-            onClick = { onIntent(AppIntent.ClearClicked) },
+        Button(
+            onClick = { onIntent(AppIntent.OnboardingContinueClicked) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(Res.string.change_date))
+            Text(stringResource(Res.string.onboarding_continue))
         }
     }
 }
 
 @Composable
-private fun CountdownContent(state: AppState) {
+private fun OnboardingMilestoneContent(state: AppState) {
     val milestone = state.milestoneInstant ?: return
     val local = milestone.toLocalDateTime(TimeZone.currentSystemDefault())
 
@@ -58,40 +79,24 @@ private fun CountdownContent(state: AppState) {
     Spacer(Modifier.height(16.dp))
 
     Text(
-        text = "${local.dayOfMonth}.${local.monthNumber.twoDigits()}.${local.year}  ${local.hour.twoDigits()}:${local.minute.twoDigits()}",
+        text = "${local.dayOfMonth.twoDigits()}.${local.monthNumber.twoDigits()}.${local.year}",
         style = MaterialTheme.typography.headlineMedium,
         color = MaterialTheme.colorScheme.primary,
         textAlign = TextAlign.Center
     )
 
-    Spacer(Modifier.height(32.dp))
-
-    Text(
-        text = stringResource(Res.string.time_remaining),
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-
     Spacer(Modifier.height(8.dp))
 
     Text(
-        text = formatSeconds(state.secondsRemaining),
-        style = MaterialTheme.typography.displaySmall,
+        text = "${local.hour.twoDigits()}:${local.minute.twoDigits()}",
+        style = MaterialTheme.typography.headlineSmall,
         color = MaterialTheme.colorScheme.primary,
         textAlign = TextAlign.Center
-    )
-
-    Spacer(Modifier.height(4.dp))
-
-    Text(
-        text = stringResource(Res.string.seconds_left),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 
 @Composable
-private fun CelebrationContent() {
+private fun OnboardingCelebrationContent() {
     Text(
         text = "🎉",
         style = MaterialTheme.typography.displayLarge,
@@ -116,17 +121,4 @@ private fun CelebrationContent() {
     )
 }
 
-private fun formatSeconds(seconds: Long): String {
-    val days = seconds / 86_400
-    val hours = (seconds % 86_400) / 3_600
-    val minutes = (seconds % 3_600) / 60
-    val secs = seconds % 60
-    return if (days > 0) {
-        "${days}д ${hours.twoDigits()}:${minutes.twoDigits()}:${secs.twoDigits()}"
-    } else {
-        "${hours.twoDigits()}:${minutes.twoDigits()}:${secs.twoDigits()}"
-    }
-}
-
 private fun Int.twoDigits(): String = toString().padStart(2, '0')
-private fun Long.twoDigits(): String = toString().padStart(2, '0')
