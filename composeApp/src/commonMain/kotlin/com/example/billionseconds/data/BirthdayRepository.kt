@@ -6,4 +6,6 @@ class BirthdayRepository(private val storage: BirthdayStorage) {
     fun getBirthday(): BirthdayData? = storage.load()
     fun saveBirthday(data: BirthdayData) = storage.save(data)
     fun clearBirthday() = storage.clear()
+    fun isOnboardingCompleted(): Boolean = storage.isOnboardingCompleted()
+    fun setOnboardingCompleted(value: Boolean) = storage.setOnboardingCompleted(value)
 }

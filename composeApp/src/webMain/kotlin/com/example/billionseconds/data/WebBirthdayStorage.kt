@@ -27,8 +27,15 @@ class WebBirthdayStorage : BirthdayStorage {
     }
 
     override fun clear() {
-        listOf("year", "month", "day", "hour", "minute", "saved")
+        listOf("year", "month", "day", "hour", "minute", "saved", "onboarding_completed")
             .forEach { localStorage.removeItem(it) }
+    }
+
+    override fun isOnboardingCompleted(): Boolean =
+        localStorage.getItem("onboarding_completed") == "true"
+
+    override fun setOnboardingCompleted(value: Boolean) {
+        localStorage.setItem("onboarding_completed", if (value) "true" else "false")
     }
 }
 

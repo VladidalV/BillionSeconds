@@ -26,7 +26,9 @@
       "Bash(./gradlew :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache)",
       "Bash(xargs -I{} bash -c 'klib-based-search\\(\\) { strings \"$1\" 2>/dev/null | grep -i \"UIDatePickerModeDate\" | head -2; }; klib-based-search {}')",
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:compileKotlinWasmJs --no-configuration-cache)",
-      "Bash(./gradlew :composeApp:compileKotlinWasmJs :composeApp:compileKotlinJs --no-configuration-cache)"
+      "Bash(./gradlew :composeApp:compileKotlinWasmJs :composeApp:compileKotlinJs --no-configuration-cache)",
+      "Bash(./gradlew compileKotlinAndroid)",
+      "Bash(./gradlew :composeApp:testDebugUnitTest)"
     ]
   }
 }

@@ -1,19 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Billion Seconds</string>
+
+    <!-- Onboarding Screen 1 -->
+    <string name="onboarding_title">Every person lives 1,000,000,000 seconds</string>
+    <string name="onboarding_subtitle">It happens only once</string>
+    <string name="onboarding_start">Start</string>
+
+    <!-- Onboarding Screen 2 -->
     <string name="enter_birthday">Enter your birthday</string>
+    <string name="optional_time">Time (optional)</string>
+    <string name="unknown_time">I don\'t know my exact birth time</string>
+    <string name="calculate">Calculate</string>
+    <string name="error_date_required">Please enter your date of birth</string>
+    <string name="error_date_future">Date of birth cannot be in the future</string>
+    <string name="error_date_invalid">Invalid date</string>
+    <string name="error_year_out_of_range">Invalid year (minimum 1900)</string>
+
+    <!-- Onboarding Screen 3 -->
+    <string name="your_milestone">Your billion-second moment</string>
+    <string name="onboarding_progress_label">Progress</string>
+    <string name="onboarding_approximate_note">* Time is approximate (birth time unknown)</string>
+    <string name="onboarding_continue">Continue</string>
+
+    <!-- Main App -->
     <string name="day">Day</string>
     <string name="month">Month</string>
     <string name="year">Year</string>
     <string name="hour">Hour</string>
     <string name="minute">Minute</string>
-    <string name="calculate">Calculate</string>
-    <string name="your_milestone">Your billion-second moment</string>
     <string name="time_remaining">Time remaining</string>
     <string name="seconds_left">seconds left</string>
     <string name="congratulations">Congratulations!</string>
     <string name="milestone_reached">You have lived a billion seconds!</string>
     <string name="change_date">Change date</string>
     <string name="milestone_date">Milestone date</string>
-    <string name="optional_time">Time (optional)</string>
 </resources>

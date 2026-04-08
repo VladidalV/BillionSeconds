@@ -32,6 +32,13 @@ class AndroidBirthdayStorage(context: Context) : BirthdayStorage {
     }
 
     override fun clear() = prefs.edit().clear().apply()
+
+    override fun isOnboardingCompleted(): Boolean =
+        prefs.getBoolean("onboarding_completed", false)
+
+    override fun setOnboardingCompleted(value: Boolean) {
+        prefs.edit().putBoolean("onboarding_completed", value).apply()
+    }
 }
 
 object AppContext {

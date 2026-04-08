@@ -28,8 +28,15 @@ class IosBirthdayStorage : BirthdayStorage {
     }
 
     override fun clear() {
-        listOf("year", "month", "day", "hour", "minute", "saved")
+        listOf("year", "month", "day", "hour", "minute", "saved", "onboarding_completed")
             .forEach { defaults.removeObjectForKey(it) }
+    }
+
+    override fun isOnboardingCompleted(): Boolean =
+        defaults.boolForKey("onboarding_completed")
+
+    override fun setOnboardingCompleted(value: Boolean) {
+        defaults.setBool(value, "onboarding_completed")
     }
 }
 

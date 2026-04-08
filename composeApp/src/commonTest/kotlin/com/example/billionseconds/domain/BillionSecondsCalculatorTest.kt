@@ -52,4 +52,39 @@ class BillionSecondsCalculatorTest {
         val now = milestone.plus(100L, DateTimeUnit.SECOND)
         assertEquals(-100L, BillionSecondsCalculator.secondsUntil(milestone, now))
     }
+
+    @Test
+    fun calculateProgressReturnsZeroAtBirth() {
+        val birthInstant = LocalDateTime(1990, 6, 15, 12, 0, 0, 0).toInstant(TimeZone.UTC)
+        val progress = BillionSecondsCalculator.calculateProgress(birthInstant, birthInstant)
+        assertEquals(0f, progress)
+    }
+
+    @Test
+    fun calculateProgressReturnsOneAtMilestone() {
+        val birthInstant = LocalDateTime(1990, 6, 15, 12, 0, 0, 0).toInstant(TimeZone.UTC)
+        val milestone = birthInstant.plus(1_000_000_000L, DateTimeUnit.SECOND)
+        val progress = BillionSecondsCalculator.calculateProgress(birthInstant, milestone)
+        assertEquals(1f, progress)
+    }
+
+    @Test
+    fun calculateProgressClampsAboveOne() {
+        val birthInstant = LocalDateTime(1990, 6, 15, 12, 0, 0, 0).toInstant(TimeZone.UTC)
+        val afterMilestone = birthInstant.plus(2_000_000_000L, DateTimeUnit.SECOND)
+        val progress = BillionSecondsCalculator.calculateProgress(birthInstant, afterMilestone)
+        assertEquals(1f, progress)
+    }
+
+    @Test
+    fun computeAllReturnsConsistentResult() {
+        val now = LocalDateTime(2022, 1, 1, 0, 0, 0, 0).toInstant(TimeZone.UTC)
+        val result = BillionSecondsCalculator.computeAll(birthday, now)
+        val expectedMilestone = BillionSecondsCalculator.calculateMilestone(birthday)
+        assertEquals(expectedMilestone, result.milestoneInstant)
+        assertFalse(result.isMilestoneReached)
+        assertTrue(result.secondsRemaining > 0L)
+        assertTrue(result.progressPercent > 0f)
+        assertTrue(result.progressPercent < 1f)
+    }
 }
