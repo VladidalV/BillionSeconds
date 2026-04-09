@@ -39,6 +39,13 @@ class AndroidBirthdayStorage(context: Context) : BirthdayStorage {
     override fun setOnboardingCompleted(value: Boolean) {
         prefs.edit().putBoolean("onboarding_completed", value).apply()
     }
+
+    override fun isUnknownTime(): Boolean =
+        prefs.getBoolean("unknown_time", false)
+
+    override fun setUnknownTime(value: Boolean) {
+        prefs.edit().putBoolean("unknown_time", value).apply()
+    }
 }
 
 object AppContext {

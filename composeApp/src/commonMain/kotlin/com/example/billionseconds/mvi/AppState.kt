@@ -24,5 +24,8 @@ data class AppState(
     val secondsRemaining: Long  = 0L,
     val showMainResult: Boolean = false,
 
-    val error: String? = null
+    val error: String? = null,
+
+    // Countdown screen
+    val countdown: CountdownUiState = CountdownUiState()
 )

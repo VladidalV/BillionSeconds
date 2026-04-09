@@ -4,6 +4,9 @@ import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.model.BirthdayData
 import com.example.billionseconds.domain.BillionSecondsCalculator
 import com.example.billionseconds.domain.BirthdayValidator
+import com.example.billionseconds.domain.CountdownFormatter
+import com.example.billionseconds.domain.model.MilestoneResult
+import com.example.billionseconds.domain.model.toEventStatus
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.util.currentInstant
 import kotlinx.coroutines.*
@@ -15,6 +18,9 @@ class AppStore(private val repository: BirthdayRepository) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state.asStateFlow()
+
+    private val _effect = MutableSharedFlow<AppEffect>(extraBufferCapacity = 16)
+    val effect: SharedFlow<AppEffect> = _effect.asSharedFlow()
 
     private var tickJob: Job? = null
 
@@ -30,6 +36,7 @@ class AppStore(private val repository: BirthdayRepository) {
         if (repository.isOnboardingCompleted() && saved != null) {
             val now = currentInstant()
             val result = BillionSecondsCalculator.computeAll(saved, now)
+            val unknownTime = repository.isUnknownTime()
             _state.value = AppState(
                 screen = AppScreen.Main,
                 year = saved.year,
@@ -37,15 +44,16 @@ class AppStore(private val repository: BirthdayRepository) {
                 day = saved.day,
                 hour = saved.hour,
                 minute = saved.minute,
+                unknownTime = unknownTime,
                 milestoneInstant = result.milestoneInstant,
                 progressPercent = result.progressPercent,
                 isMilestoneReached = result.isMilestoneReached,
                 secondsRemaining = result.secondsRemaining,
-                showMainResult = true
+                showMainResult = true,
+                countdown = buildCountdownUiState(result, unknownTime, now)
             )
             startTick(result.milestoneInstant)
         }
-        // else: остаётся AppScreen.OnboardingIntro (default)
     }
 
     fun dispatch(intent: AppIntent) {
@@ -55,9 +63,18 @@ class AppStore(private val repository: BirthdayRepository) {
             is AppIntent.OnboardingContinueClicked  -> onboardingContinue()
             is AppIntent.CalculateClicked           -> mainCalculate()
             is AppIntent.ClearClicked               -> mainClear()
+            is AppIntent.CountdownScreenStarted     -> onCountdownResumed()
+            is AppIntent.CountdownScreenResumed     -> onCountdownResumed()
+            is AppIntent.ShareClicked               -> onShare()
+            is AppIntent.CreateVideoClicked         -> emitEffect(AppEffect.ShowComingSoon("create_video"))
+            is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
+            is AppIntent.AddFamilyClicked           -> emitEffect(AppEffect.ShowComingSoon("add_family"))
+            is AppIntent.LifeStatsClicked           -> emitEffect(AppEffect.NavigateToLifeStats)
             else -> Unit
         }
     }
+
+    // ── Onboarding ────────────────────────────────────────────────────────────
 
     private fun onboardingCalculate() {
         val s = _state.value
@@ -78,6 +95,7 @@ class AppStore(private val repository: BirthdayRepository) {
             val now = currentInstant()
             val result = BillionSecondsCalculator.computeAll(data, now)
             repository.saveBirthday(data)
+            repository.setUnknownTime(s.unknownTime)
             _state.update {
                 it.copy(
                     milestoneInstant = result.milestoneInstant,
@@ -95,10 +113,23 @@ class AppStore(private val repository: BirthdayRepository) {
 
     private fun onboardingContinue() {
         repository.setOnboardingCompleted(true)
-        val milestone = _state.value.milestoneInstant ?: return
-        _state.update { it.copy(screen = AppScreen.Main, showMainResult = true) }
+        val s = _state.value
+        val milestone = s.milestoneInstant ?: return
+        val now = currentInstant()
+        val result = BillionSecondsCalculator.computeAll(
+            BirthdayData(s.year!!, s.month!!, s.day!!, s.hour, s.minute), now
+        )
+        _state.update {
+            it.copy(
+                screen = AppScreen.Main,
+                showMainResult = true,
+                countdown = buildCountdownUiState(result, s.unknownTime, now)
+            )
+        }
         startTick(milestone)
     }
+
+    // ── Main (legacy BirthdayScreen) ─────────────────────────────────────────
 
     private fun mainCalculate() {
         val s = _state.value
@@ -118,7 +149,8 @@ class AppStore(private val repository: BirthdayRepository) {
                     isMilestoneReached = result.isMilestoneReached,
                     secondsRemaining = result.secondsRemaining,
                     showMainResult = true,
-                    error = null
+                    error = null,
+                    countdown = buildCountdownUiState(result, s.unknownTime, now)
                 )
             }
             startTick(result.milestoneInstant)
@@ -130,10 +162,42 @@ class AppStore(private val repository: BirthdayRepository) {
     private fun mainClear() {
         tickJob?.cancel()
         repository.clearBirthday()
-        // clearBirthday() вызывает storage.clear() который сбрасывает все ключи,
-        // включая onboarding_completed. Восстанавливаем флаг — онбординг уже пройден.
+        // clearBirthday() сбрасывает все ключи включая onboarding_completed.
+        // Восстанавливаем флаг — онбординг уже пройден.
         repository.setOnboardingCompleted(true)
     }
+
+    // ── Countdown screen ──────────────────────────────────────────────────────
+
+    private fun onCountdownResumed() {
+        val s = _state.value
+        val milestone = s.milestoneInstant ?: return
+        val saved = repository.getBirthday() ?: return
+        val now = currentInstant()
+        val result = BillionSecondsCalculator.computeAll(saved, now)
+        _state.update {
+            it.copy(
+                countdown = buildCountdownUiState(result, s.unknownTime, now)
+            )
+        }
+    }
+
+    private fun onShare() {
+        val s = _state.value.countdown
+        val text = buildShareText(s)
+        emitEffect(AppEffect.ShareText(text))
+    }
+
+    private fun buildShareText(s: CountdownUiState): String {
+        return if (s.eventStatus == com.example.billionseconds.domain.model.EventStatus.Reached) {
+            "Я достиг миллиарда секунд жизни! 🎉 #BillionSeconds"
+        } else {
+            "Мой миллиард секунд наступит ${s.formattedMilestoneDate} в ${s.formattedMilestoneTime}. " +
+            "Прогресс: ${s.formattedProgress} #BillionSeconds"
+        }
+    }
+
+    // ── Tick ─────────────────────────────────────────────────────────────────
 
     private fun startTick(milestone: Instant) {
         tickJob?.cancel()
@@ -141,14 +205,44 @@ class AppStore(private val repository: BirthdayRepository) {
             while (true) {
                 delay(1000)
                 val now = currentInstant()
-                _state.update {
-                    it.copy(
-                        isMilestoneReached = BillionSecondsCalculator.isReached(milestone, now),
-                        secondsRemaining = maxOf(0L, BillionSecondsCalculator.secondsUntil(milestone, now))
-                    )
+                val s = _state.value
+                val saved = repository.getBirthday()
+                if (saved != null) {
+                    val result = BillionSecondsCalculator.computeAll(saved, now)
+                    _state.update {
+                        it.copy(
+                            isMilestoneReached = result.isMilestoneReached,
+                            secondsRemaining = result.secondsRemaining,
+                            countdown = buildCountdownUiState(result, s.unknownTime, now)
+                        )
+                    }
                 }
             }
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private fun buildCountdownUiState(
+        result: MilestoneResult,
+        unknownTime: Boolean,
+        now: Instant
+    ): CountdownUiState = CountdownUiState(
+        isLoading = false,
+        eventStatus = result.toEventStatus(now),
+        milestoneInstant = result.milestoneInstant,
+        progressFraction = result.progressPercent,
+        secondsRemaining = result.secondsRemaining,
+        isUnknownBirthTime = unknownTime,
+        formattedMilestoneDate = CountdownFormatter.formatMilestoneDate(result.milestoneInstant),
+        formattedMilestoneTime = CountdownFormatter.formatMilestoneTime(result.milestoneInstant),
+        formattedCountdown = CountdownFormatter.formatCountdown(result.secondsRemaining),
+        formattedProgress = CountdownFormatter.formatProgress(result.progressPercent),
+        error = null
+    )
+
+    private fun emitEffect(effect: AppEffect) {
+        scope.launch { _effect.emit(effect) }
     }
 
     fun dispose() = scope.cancel()

@@ -19,4 +19,18 @@ sealed class AppIntent {
     data class TimeChanged(val hour: Int, val minute: Int) : AppIntent()
     data object CalculateClicked : AppIntent()
     data object ClearClicked : AppIntent()
+
+    // Countdown screen — lifecycle
+    data object CountdownScreenStarted  : AppIntent()
+    data object CountdownScreenResumed  : AppIntent()
+
+    // Countdown screen — action buttons
+    data object ShareClicked            : AppIntent()
+    data object CreateVideoClicked      : AppIntent()
+    data object WriteLetterClicked      : AppIntent()
+    data object AddFamilyClicked        : AppIntent()
+    data object LifeStatsClicked        : AppIntent()
+
+    // Navigation
+    data object BackClicked             : AppIntent()
 }

@@ -4,13 +4,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.createBirthdayStorage
+import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppStore
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.ui.BirthdayScreen
-import com.example.billionseconds.ui.ResultScreen
-import com.example.billionseconds.ui.onboarding.OnboardingIntroScreen
+import com.example.billionseconds.ui.countdown.CountdownScreen
+import com.example.billionseconds.ui.lifestats.LifeStatsScreen
 import com.example.billionseconds.ui.onboarding.OnboardingInputScreen
+import com.example.billionseconds.ui.onboarding.OnboardingIntroScreen
 import com.example.billionseconds.ui.onboarding.OnboardingResultScreen
+import com.example.billionseconds.ui.shared.ComingSoonSheet
 
 @Composable
 fun App() {
@@ -22,6 +25,28 @@ fun App() {
     }
 
     val state by store.state.collectAsState()
+
+    // ComingSoon sheet state — управляется через эффекты
+    var comingSoonFeature by remember { mutableStateOf<String?>(null) }
+
+    // Обработка одноразовых эффектов
+    LaunchedEffect(store) {
+        store.effect.collect { effect ->
+            when (effect) {
+                is AppEffect.NavigateToLifeStats -> Unit // уже обработано через state
+                is AppEffect.ShareText           -> shareText(effect.text)
+                is AppEffect.ShowComingSoon      -> comingSoonFeature = effect.feature
+                is AppEffect.ShowError           -> Unit // TODO: snackbar
+            }
+        }
+    }
+
+    comingSoonFeature?.let { feature ->
+        ComingSoonSheet(
+            feature = feature,
+            onDismiss = { comingSoonFeature = null }
+        )
+    }
 
     MaterialTheme {
         when (state.screen) {
@@ -35,11 +60,12 @@ fun App() {
                 OnboardingResultScreen(state = state, onIntent = store::dispatch)
 
             AppScreen.Main ->
-                if (state.showMainResult) {
-                    ResultScreen(state = state, onIntent = store::dispatch)
-                } else {
-                    BirthdayScreen(state = state, onIntent = store::dispatch)
-                }
+                CountdownScreen(state = state, onIntent = store::dispatch)
+
+            AppScreen.LifeStats ->
+                LifeStatsScreen(countdown = state.countdown, onIntent = store::dispatch)
         }
     }
 }
+
+expect fun shareText(text: String)

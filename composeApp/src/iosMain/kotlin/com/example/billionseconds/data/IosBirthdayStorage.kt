@@ -28,7 +28,7 @@ class IosBirthdayStorage : BirthdayStorage {
     }
 
     override fun clear() {
-        listOf("year", "month", "day", "hour", "minute", "saved", "onboarding_completed")
+        listOf("year", "month", "day", "hour", "minute", "saved", "onboarding_completed", "unknown_time")
             .forEach { defaults.removeObjectForKey(it) }
     }
 
@@ -37,6 +37,13 @@ class IosBirthdayStorage : BirthdayStorage {
 
     override fun setOnboardingCompleted(value: Boolean) {
         defaults.setBool(value, "onboarding_completed")
+    }
+
+    override fun isUnknownTime(): Boolean =
+        defaults.boolForKey("unknown_time")
+
+    override fun setUnknownTime(value: Boolean) {
+        defaults.setBool(value, "unknown_time")
     }
 }
 

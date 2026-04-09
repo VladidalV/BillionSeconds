@@ -8,4 +8,6 @@ class BirthdayRepository(private val storage: BirthdayStorage) {
     fun clearBirthday() = storage.clear()
     fun isOnboardingCompleted(): Boolean = storage.isOnboardingCompleted()
     fun setOnboardingCompleted(value: Boolean) = storage.setOnboardingCompleted(value)
+    fun isUnknownTime(): Boolean = storage.isUnknownTime()
+    fun setUnknownTime(value: Boolean) = storage.setUnknownTime(value)
 }

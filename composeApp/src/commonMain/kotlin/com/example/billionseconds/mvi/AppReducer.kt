@@ -53,5 +53,25 @@ object AppReducer {
                 showMainResult = false, error = null,
                 unknownTime = false
             )
+
+        // Countdown screen — lifecycle (side effects handled in Store)
+        is AppIntent.CountdownScreenStarted -> state
+        is AppIntent.CountdownScreenResumed -> state
+
+        // Countdown screen — action buttons (side effects only, no state change)
+        is AppIntent.ShareClicked       -> state
+        is AppIntent.CreateVideoClicked -> state
+        is AppIntent.WriteLetterClicked -> state
+        is AppIntent.AddFamilyClicked   -> state
+        is AppIntent.LifeStatsClicked   ->
+            state.copy(screen = com.example.billionseconds.navigation.AppScreen.LifeStats)
+
+        // Navigation
+        is AppIntent.BackClicked ->
+            when (state.screen) {
+                com.example.billionseconds.navigation.AppScreen.LifeStats ->
+                    state.copy(screen = com.example.billionseconds.navigation.AppScreen.Main)
+                else -> state
+            }
     }
 }
