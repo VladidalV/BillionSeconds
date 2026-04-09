@@ -29,7 +29,9 @@ object CountdownFormatter {
 
     fun formatProgress(fraction: Float): String {
         val percent = (fraction * 100f).coerceIn(0f, 100f)
-        return "%.1f%%".format(percent)
+        val whole = percent.toInt()
+        val decimal = ((percent - whole) * 10).toInt()
+        return "$whole.${decimal}%"
     }
 
     private fun Int.pad(): String  = toString().padStart(2, '0')

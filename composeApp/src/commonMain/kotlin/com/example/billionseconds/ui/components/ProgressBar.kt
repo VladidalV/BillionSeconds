@@ -27,7 +27,11 @@ fun MilestoneProgressBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "%.1f%%".format(progress * 100f),
+                text = run {
+                    val p = (progress * 100f).coerceIn(0f, 100f)
+                    val whole = p.toInt(); val decimal = ((p - whole) * 10).toInt()
+                    "$whole.${decimal}%"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )

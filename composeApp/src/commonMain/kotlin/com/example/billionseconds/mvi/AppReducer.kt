@@ -1,6 +1,7 @@
 package com.example.billionseconds.mvi
 
 import com.example.billionseconds.navigation.AppScreen
+import com.example.billionseconds.navigation.MainTab
 
 object AppReducer {
 
@@ -54,24 +55,24 @@ object AppReducer {
                 unknownTime = false
             )
 
+        // Bottom navigation — guard: повторный тап на текущую вкладку игнорируется
+        is AppIntent.TabSelected -> {
+            val currentTab = (state.screen as? AppScreen.Main)?.tab
+            if (currentTab == intent.tab) state
+            else state.copy(screen = AppScreen.Main(tab = intent.tab))
+        }
+
         // Countdown screen — lifecycle (side effects handled in Store)
         is AppIntent.CountdownScreenStarted -> state
         is AppIntent.CountdownScreenResumed -> state
 
-        // Countdown screen — action buttons (side effects only, no state change)
+        // Countdown screen — action buttons (side effects only)
         is AppIntent.ShareClicked       -> state
         is AppIntent.CreateVideoClicked -> state
         is AppIntent.WriteLetterClicked -> state
         is AppIntent.AddFamilyClicked   -> state
-        is AppIntent.LifeStatsClicked   ->
-            state.copy(screen = com.example.billionseconds.navigation.AppScreen.LifeStats)
 
         // Navigation
-        is AppIntent.BackClicked ->
-            when (state.screen) {
-                com.example.billionseconds.navigation.AppScreen.LifeStats ->
-                    state.copy(screen = com.example.billionseconds.navigation.AppScreen.Main)
-                else -> state
-            }
+        is AppIntent.BackClicked -> state // ExitApp effect emitted in AppStore
     }
 }

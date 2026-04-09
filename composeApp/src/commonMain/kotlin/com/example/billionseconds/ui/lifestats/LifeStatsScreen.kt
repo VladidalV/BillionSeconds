@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.CountdownUiState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LifeStatsScreen(
     countdown: CountdownUiState,
@@ -20,61 +19,40 @@ fun LifeStatsScreen(
 ) {
     val secondsLived = (countdown.progressFraction * 1_000_000_000L).toLong()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Статистика жизни") },
-                navigationIcon = {
-                    TextButton(onClick = { onIntent(AppIntent.BackClicked) }) {
-                        Text("←")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            StatCard(
-                label = "Секунд прожито",
-                value = "%,d".format(secondsLived)
-            )
-            StatCard(
-                label = "Минут прожито",
-                value = "%,d".format(secondsLived / 60)
-            )
-            StatCard(
-                label = "Часов прожито",
-                value = "%,d".format(secondsLived / 3_600)
-            )
-            StatCard(
-                label = "Дней прожито",
-                value = "%,d".format(secondsLived / 86_400)
-            )
-            StatCard(
-                label = "Недель прожито",
-                value = "%,d".format(secondsLived / 604_800)
-            )
-            StatCard(
-                label = "Прогресс к миллиарду",
-                value = countdown.formattedProgress
-            )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Статистика жизни",
+            style = MaterialTheme.typography.headlineSmall
+        )
 
-            Spacer(Modifier.height(8.dp))
+        StatCard(label = "Секунд прожито",   value = secondsLived.formatLarge())
+        StatCard(label = "Минут прожито",     value = (secondsLived / 60).formatLarge())
+        StatCard(label = "Часов прожито",     value = (secondsLived / 3_600).formatLarge())
+        StatCard(label = "Дней прожито",      value = (secondsLived / 86_400).formatLarge())
+        StatCard(label = "Недель прожито",    value = (secondsLived / 604_800).formatLarge())
+        StatCard(label = "Прогресс к миллиарду", value = countdown.formattedProgress)
 
-            Text(
-                text = "Каждая секунда — это часть твоей уникальной истории.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-        }
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "Каждая секунда — это часть твоей уникальной истории.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
     }
+}
+
+/** Форматирует число с разделителем тысяч пробелом: 1 234 567 */
+private fun Long.formatLarge(): String {
+    if (this < 0L) return "0"
+    return toString().reversed().chunked(3).joinToString("\u00A0").reversed()
 }
 
 @Composable

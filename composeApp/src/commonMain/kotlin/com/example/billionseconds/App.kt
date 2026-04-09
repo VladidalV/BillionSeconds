@@ -7,9 +7,7 @@ import com.example.billionseconds.data.createBirthdayStorage
 import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppStore
 import com.example.billionseconds.navigation.AppScreen
-import com.example.billionseconds.ui.BirthdayScreen
-import com.example.billionseconds.ui.countdown.CountdownScreen
-import com.example.billionseconds.ui.lifestats.LifeStatsScreen
+import com.example.billionseconds.ui.main.MainScaffold
 import com.example.billionseconds.ui.onboarding.OnboardingInputScreen
 import com.example.billionseconds.ui.onboarding.OnboardingIntroScreen
 import com.example.billionseconds.ui.onboarding.OnboardingResultScreen
@@ -26,17 +24,16 @@ fun App() {
 
     val state by store.state.collectAsState()
 
-    // ComingSoon sheet state — управляется через эффекты
     var comingSoonFeature by remember { mutableStateOf<String?>(null) }
 
     // Обработка одноразовых эффектов
     LaunchedEffect(store) {
         store.effect.collect { effect ->
             when (effect) {
-                is AppEffect.NavigateToLifeStats -> Unit // уже обработано через state
-                is AppEffect.ShareText           -> shareText(effect.text)
-                is AppEffect.ShowComingSoon      -> comingSoonFeature = effect.feature
-                is AppEffect.ShowError           -> Unit // TODO: snackbar
+                is AppEffect.ExitApp        -> exitApp()
+                is AppEffect.ShareText      -> shareText(effect.text)
+                is AppEffect.ShowComingSoon -> comingSoonFeature = effect.feature
+                is AppEffect.ShowError      -> Unit // TODO: snackbar
             }
         }
     }
@@ -59,11 +56,8 @@ fun App() {
             AppScreen.OnboardingResult ->
                 OnboardingResultScreen(state = state, onIntent = store::dispatch)
 
-            AppScreen.Main ->
-                CountdownScreen(state = state, onIntent = store::dispatch)
-
-            AppScreen.LifeStats ->
-                LifeStatsScreen(countdown = state.countdown, onIntent = store::dispatch)
+            is AppScreen.Main ->
+                MainScaffold(state = state, onIntent = store::dispatch)
         }
     }
 }

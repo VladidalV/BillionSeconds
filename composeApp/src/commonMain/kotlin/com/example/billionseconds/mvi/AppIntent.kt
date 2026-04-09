@@ -1,5 +1,7 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.navigation.MainTab
+
 sealed class AppIntent {
 
     // Onboarding Screen 1
@@ -14,23 +16,25 @@ sealed class AppIntent {
     // Onboarding Screen 3
     data object OnboardingContinueClicked : AppIntent()
 
-    // Main app
+    // Main app (legacy BirthdayScreen — may be removed later)
     data class DateChanged(val year: Int, val month: Int, val day: Int) : AppIntent()
     data class TimeChanged(val hour: Int, val minute: Int) : AppIntent()
     data object CalculateClicked : AppIntent()
     data object ClearClicked : AppIntent()
 
+    // Bottom navigation
+    data class TabSelected(val tab: MainTab) : AppIntent()
+
     // Countdown screen — lifecycle
-    data object CountdownScreenStarted  : AppIntent()
-    data object CountdownScreenResumed  : AppIntent()
+    data object CountdownScreenStarted : AppIntent()
+    data object CountdownScreenResumed : AppIntent()
 
     // Countdown screen — action buttons
-    data object ShareClicked            : AppIntent()
-    data object CreateVideoClicked      : AppIntent()
-    data object WriteLetterClicked      : AppIntent()
-    data object AddFamilyClicked        : AppIntent()
-    data object LifeStatsClicked        : AppIntent()
+    data object ShareClicked       : AppIntent()
+    data object CreateVideoClicked : AppIntent()
+    data object WriteLetterClicked : AppIntent()
+    data object AddFamilyClicked   : AppIntent()
 
     // Navigation
-    data object BackClicked             : AppIntent()
+    data object BackClicked : AppIntent()
 }

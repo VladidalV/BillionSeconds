@@ -40,22 +40,11 @@ fun ActionsBlock(onIntent: (AppIntent) -> Unit, modifier: Modifier = Modifier) {
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        OutlinedButton(
+            onClick = { onIntent(AppIntent.AddFamilyClicked) },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            OutlinedButton(
-                onClick = { onIntent(AppIntent.AddFamilyClicked) },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Семья", maxLines = 1)
-            }
-            OutlinedButton(
-                onClick = { onIntent(AppIntent.LifeStatsClicked) },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Статистика", maxLines = 1)
-            }
+            Text("Добавить семью")
         }
 
         // Смена даты рождения

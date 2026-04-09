@@ -8,6 +8,7 @@ import com.example.billionseconds.domain.CountdownFormatter
 import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
 import com.example.billionseconds.navigation.AppScreen
+import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.util.currentInstant
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -38,7 +39,7 @@ class AppStore(private val repository: BirthdayRepository) {
             val result = BillionSecondsCalculator.computeAll(saved, now)
             val unknownTime = repository.isUnknownTime()
             _state.value = AppState(
-                screen = AppScreen.Main,
+                screen = AppScreen.Main(MainTab.Home),
                 year = saved.year,
                 month = saved.month,
                 day = saved.day,
@@ -54,6 +55,7 @@ class AppStore(private val repository: BirthdayRepository) {
             )
             startTick(result.milestoneInstant)
         }
+        // else: остаётся AppScreen.OnboardingIntro (default)
     }
 
     fun dispatch(intent: AppIntent) {
@@ -69,7 +71,9 @@ class AppStore(private val repository: BirthdayRepository) {
             is AppIntent.CreateVideoClicked         -> emitEffect(AppEffect.ShowComingSoon("create_video"))
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
             is AppIntent.AddFamilyClicked           -> emitEffect(AppEffect.ShowComingSoon("add_family"))
-            is AppIntent.LifeStatsClicked           -> emitEffect(AppEffect.NavigateToLifeStats)
+            is AppIntent.BackClicked                -> {
+                if (_state.value.screen is AppScreen.Main) emitEffect(AppEffect.ExitApp)
+            }
             else -> Unit
         }
     }
@@ -121,7 +125,7 @@ class AppStore(private val repository: BirthdayRepository) {
         )
         _state.update {
             it.copy(
-                screen = AppScreen.Main,
+                screen = AppScreen.Main(MainTab.Home),
                 showMainResult = true,
                 countdown = buildCountdownUiState(result, s.unknownTime, now)
             )
@@ -129,7 +133,7 @@ class AppStore(private val repository: BirthdayRepository) {
         startTick(milestone)
     }
 
-    // ── Main (legacy BirthdayScreen) ─────────────────────────────────────────
+    // ── Main (legacy) ─────────────────────────────────────────────────────────
 
     private fun mainCalculate() {
         val s = _state.value
@@ -171,30 +175,23 @@ class AppStore(private val repository: BirthdayRepository) {
 
     private fun onCountdownResumed() {
         val s = _state.value
-        val milestone = s.milestoneInstant ?: return
         val saved = repository.getBirthday() ?: return
         val now = currentInstant()
         val result = BillionSecondsCalculator.computeAll(saved, now)
         _state.update {
-            it.copy(
-                countdown = buildCountdownUiState(result, s.unknownTime, now)
-            )
+            it.copy(countdown = buildCountdownUiState(result, s.unknownTime, now))
         }
     }
 
     private fun onShare() {
         val s = _state.value.countdown
-        val text = buildShareText(s)
-        emitEffect(AppEffect.ShareText(text))
-    }
-
-    private fun buildShareText(s: CountdownUiState): String {
-        return if (s.eventStatus == com.example.billionseconds.domain.model.EventStatus.Reached) {
-            "Я достиг миллиарда секунд жизни! 🎉 #BillionSeconds"
+        val text = if (s.eventStatus == com.example.billionseconds.domain.model.EventStatus.Reached) {
+            "Я достиг миллиарда секунд жизни! \uD83C\uDF89 #BillionSeconds"
         } else {
             "Мой миллиард секунд наступит ${s.formattedMilestoneDate} в ${s.formattedMilestoneTime}. " +
             "Прогресс: ${s.formattedProgress} #BillionSeconds"
         }
+        emitEffect(AppEffect.ShareText(text))
     }
 
     // ── Tick ─────────────────────────────────────────────────────────────────
