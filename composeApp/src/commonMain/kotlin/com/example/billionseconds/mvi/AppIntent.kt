@@ -35,6 +35,10 @@ sealed class AppIntent {
     data object WriteLetterClicked : AppIntent()
     data object AddFamilyClicked   : AppIntent()
 
+    // Life Stats screen — lifecycle
+    data object LifeStatsScreenStarted : AppIntent()
+    data object LifeStatsScreenResumed : AppIntent()
+
     // Navigation
     data object BackClicked : AppIntent()
 }

@@ -8,7 +8,7 @@ object BillionSecondsCalculator {
 
     const val BILLION = 1_000_000_000L
 
-    private fun birthInstantFrom(data: BirthdayData): Instant =
+    internal fun birthInstantFrom(data: BirthdayData): Instant =
         LocalDateTime(
             year = data.year,
             monthNumber = data.month,

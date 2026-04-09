@@ -5,6 +5,8 @@ import com.example.billionseconds.data.model.BirthdayData
 import com.example.billionseconds.domain.BillionSecondsCalculator
 import com.example.billionseconds.domain.BirthdayValidator
 import com.example.billionseconds.domain.CountdownFormatter
+import com.example.billionseconds.domain.LifeStatsCalculator
+import com.example.billionseconds.domain.LifeStatsFormatter
 import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
 import com.example.billionseconds.navigation.AppScreen
@@ -51,11 +53,11 @@ class AppStore(private val repository: BirthdayRepository) {
                 isMilestoneReached = result.isMilestoneReached,
                 secondsRemaining = result.secondsRemaining,
                 showMainResult = true,
-                countdown = buildCountdownUiState(result, unknownTime, now)
+                countdown  = buildCountdownUiState(result, unknownTime, now),
+                lifeStats  = buildLifeStatsUiState(saved, result, unknownTime, now)
             )
             startTick(result.milestoneInstant)
         }
-        // else: остаётся AppScreen.OnboardingIntro (default)
     }
 
     fun dispatch(intent: AppIntent) {
@@ -67,11 +69,13 @@ class AppStore(private val repository: BirthdayRepository) {
             is AppIntent.ClearClicked               -> mainClear()
             is AppIntent.CountdownScreenStarted     -> onCountdownResumed()
             is AppIntent.CountdownScreenResumed     -> onCountdownResumed()
+            is AppIntent.LifeStatsScreenStarted     -> onLifeStatsResumed()
+            is AppIntent.LifeStatsScreenResumed     -> onLifeStatsResumed()
             is AppIntent.ShareClicked               -> onShare()
             is AppIntent.CreateVideoClicked         -> emitEffect(AppEffect.ShowComingSoon("create_video"))
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
             is AppIntent.AddFamilyClicked           -> emitEffect(AppEffect.ShowComingSoon("add_family"))
-            is AppIntent.BackClicked                -> {
+            is AppIntent.BackClicked -> {
                 if (_state.value.screen is AppScreen.Main) emitEffect(AppEffect.ExitApp)
             }
             else -> Unit
@@ -102,12 +106,12 @@ class AppStore(private val repository: BirthdayRepository) {
             repository.setUnknownTime(s.unknownTime)
             _state.update {
                 it.copy(
-                    milestoneInstant = result.milestoneInstant,
-                    progressPercent = result.progressPercent,
+                    milestoneInstant   = result.milestoneInstant,
+                    progressPercent    = result.progressPercent,
                     isMilestoneReached = result.isMilestoneReached,
-                    secondsRemaining = result.secondsRemaining,
-                    screen = AppScreen.OnboardingResult,
-                    error = null
+                    secondsRemaining   = result.secondsRemaining,
+                    screen             = AppScreen.OnboardingResult,
+                    error              = null
                 )
             }
         } catch (e: Exception) {
@@ -120,14 +124,14 @@ class AppStore(private val repository: BirthdayRepository) {
         val s = _state.value
         val milestone = s.milestoneInstant ?: return
         val now = currentInstant()
-        val result = BillionSecondsCalculator.computeAll(
-            BirthdayData(s.year!!, s.month!!, s.day!!, s.hour, s.minute), now
-        )
+        val data = BirthdayData(s.year!!, s.month!!, s.day!!, s.hour, s.minute)
+        val result = BillionSecondsCalculator.computeAll(data, now)
         _state.update {
             it.copy(
-                screen = AppScreen.Main(MainTab.Home),
+                screen       = AppScreen.Main(MainTab.Home),
                 showMainResult = true,
-                countdown = buildCountdownUiState(result, s.unknownTime, now)
+                countdown    = buildCountdownUiState(result, s.unknownTime, now),
+                lifeStats    = buildLifeStatsUiState(data, result, s.unknownTime, now)
             )
         }
         startTick(milestone)
@@ -143,18 +147,19 @@ class AppStore(private val repository: BirthdayRepository) {
 
         try {
             val data = BirthdayData(year, month, day, s.hour, s.minute)
-            val now = currentInstant()
+            val now  = currentInstant()
             val result = BillionSecondsCalculator.computeAll(data, now)
             repository.saveBirthday(data)
             _state.update {
                 it.copy(
-                    milestoneInstant = result.milestoneInstant,
-                    progressPercent = result.progressPercent,
+                    milestoneInstant   = result.milestoneInstant,
+                    progressPercent    = result.progressPercent,
                     isMilestoneReached = result.isMilestoneReached,
-                    secondsRemaining = result.secondsRemaining,
-                    showMainResult = true,
-                    error = null,
-                    countdown = buildCountdownUiState(result, s.unknownTime, now)
+                    secondsRemaining   = result.secondsRemaining,
+                    showMainResult     = true,
+                    error              = null,
+                    countdown  = buildCountdownUiState(result, s.unknownTime, now),
+                    lifeStats  = buildLifeStatsUiState(data, result, s.unknownTime, now)
                 )
             }
             startTick(result.milestoneInstant)
@@ -166,8 +171,6 @@ class AppStore(private val repository: BirthdayRepository) {
     private fun mainClear() {
         tickJob?.cancel()
         repository.clearBirthday()
-        // clearBirthday() сбрасывает все ключи включая onboarding_completed.
-        // Восстанавливаем флаг — онбординг уже пройден.
         repository.setOnboardingCompleted(true)
     }
 
@@ -182,6 +185,23 @@ class AppStore(private val repository: BirthdayRepository) {
             it.copy(countdown = buildCountdownUiState(result, s.unknownTime, now))
         }
     }
+
+    // ── Life Stats screen ─────────────────────────────────────────────────────
+
+    private fun onLifeStatsResumed() {
+        val s = _state.value
+        val saved = repository.getBirthday() ?: run {
+            _state.update { it.copy(lifeStats = LifeStatsUiState(isLoading = false, error = LifeStatsError.NoBirthData)) }
+            return
+        }
+        val now = currentInstant()
+        val result = BillionSecondsCalculator.computeAll(saved, now)
+        _state.update {
+            it.copy(lifeStats = buildLifeStatsUiState(saved, result, s.unknownTime, now))
+        }
+    }
+
+    // ── Share ─────────────────────────────────────────────────────────────────
 
     private fun onShare() {
         val s = _state.value.countdown
@@ -209,8 +229,9 @@ class AppStore(private val repository: BirthdayRepository) {
                     _state.update {
                         it.copy(
                             isMilestoneReached = result.isMilestoneReached,
-                            secondsRemaining = result.secondsRemaining,
-                            countdown = buildCountdownUiState(result, s.unknownTime, now)
+                            secondsRemaining   = result.secondsRemaining,
+                            countdown  = buildCountdownUiState(result, s.unknownTime, now),
+                            lifeStats  = buildLifeStatsUiState(saved, result, s.unknownTime, now)
                         )
                     }
                 }
@@ -218,25 +239,113 @@ class AppStore(private val repository: BirthdayRepository) {
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Builders ──────────────────────────────────────────────────────────────
 
     private fun buildCountdownUiState(
         result: MilestoneResult,
         unknownTime: Boolean,
         now: Instant
     ): CountdownUiState = CountdownUiState(
-        isLoading = false,
-        eventStatus = result.toEventStatus(now),
-        milestoneInstant = result.milestoneInstant,
-        progressFraction = result.progressPercent,
-        secondsRemaining = result.secondsRemaining,
-        isUnknownBirthTime = unknownTime,
+        isLoading           = false,
+        eventStatus         = result.toEventStatus(now),
+        milestoneInstant    = result.milestoneInstant,
+        progressFraction    = result.progressPercent,
+        secondsRemaining    = result.secondsRemaining,
+        isUnknownBirthTime  = unknownTime,
         formattedMilestoneDate = CountdownFormatter.formatMilestoneDate(result.milestoneInstant),
         formattedMilestoneTime = CountdownFormatter.formatMilestoneTime(result.milestoneInstant),
-        formattedCountdown = CountdownFormatter.formatCountdown(result.secondsRemaining),
-        formattedProgress = CountdownFormatter.formatProgress(result.progressPercent),
-        error = null
+        formattedCountdown  = CountdownFormatter.formatCountdown(result.secondsRemaining),
+        formattedProgress   = CountdownFormatter.formatProgress(result.progressPercent),
+        error               = null
     )
+
+    private fun buildLifeStatsUiState(
+        data: BirthdayData,
+        result: MilestoneResult,
+        unknownTime: Boolean,
+        now: Instant
+    ): LifeStatsUiState {
+        val raw = LifeStatsCalculator.compute(
+            birthData        = data,
+            now              = now,
+            isUnknownTime    = unknownTime,
+            progressFraction = result.progressPercent,
+            secondsRemaining = result.secondsRemaining
+        )
+
+        val approxDisclaimer = if (unknownTime) "Время рождения не указано — расчёт приблизительный" else null
+
+        val exactStats = listOf(
+            StatItem(
+                id    = "seconds_lived",
+                title = "Секунд прожито",
+                value = LifeStatsFormatter.formatLarge(raw.secondsLived)
+            ),
+            StatItem(
+                id    = "minutes_lived",
+                title = "Минут прожито",
+                value = LifeStatsFormatter.formatLarge(raw.minutesLived)
+            ),
+            StatItem(
+                id    = "hours_lived",
+                title = "Часов прожито",
+                value = LifeStatsFormatter.formatLarge(raw.hoursLived)
+            ),
+            StatItem(
+                id    = "days_lived",
+                title = "Дней прожито",
+                value = LifeStatsFormatter.formatLarge(raw.daysLived)
+            ),
+            StatItem(
+                id    = "weeks_lived",
+                title = "Недель прожито",
+                value = LifeStatsFormatter.formatLarge(raw.weeksLived)
+            ),
+            StatItem(
+                id    = "progress_billion",
+                title = "Прогресс к миллиарду",
+                value = LifeStatsFormatter.formatPercent(raw.progressToBillion * 100f)
+            ),
+            StatItem(
+                id    = "days_to_billion",
+                title = if (raw.secondsRemaining > 0L) "Дней до миллиарда" else "Дней назад",
+                value = LifeStatsFormatter.formatLarge(raw.secondsRemaining / 86_400L)
+            )
+        )
+
+        val approximateStats = listOf(
+            StatItem(
+                id           = "heartbeats",
+                title        = "Ударов сердца",
+                value        = LifeStatsFormatter.formatApproxBillions(raw.heartbeats),
+                isApproximate = true,
+                disclaimer   = approxDisclaimer ?: "Из расчёта ${LifeStatsCalculator.HEART_RATE_BPM} уд/мин"
+            ),
+            StatItem(
+                id           = "sleep_days",
+                title        = "Дней сна",
+                value        = LifeStatsFormatter.formatApprox(raw.sleepDays),
+                isApproximate = true,
+                disclaimer   = approxDisclaimer ?: "Из расчёта ${LifeStatsCalculator.SLEEP_HOURS_PER_DAY.toInt()} ч/сутки"
+            ),
+            StatItem(
+                id           = "life_progress",
+                title        = "Прожито от средней жизни",
+                value        = LifeStatsFormatter.formatPercent(raw.lifeProgressPct),
+                isApproximate = true,
+                disclaimer   = approxDisclaimer ?: "Базовая продолжительность ${LifeStatsCalculator.LIFE_EXPECTANCY_YEARS.toInt()} лет"
+            )
+        )
+
+        return LifeStatsUiState(
+            isLoading          = false,
+            isUnknownBirthTime = unknownTime,
+            ageLabel           = LifeStatsFormatter.formatAge(raw.ageYears, raw.ageMonths, raw.ageDays),
+            exactStats         = exactStats,
+            approximateStats   = approximateStats,
+            error              = null
+        )
+    }
 
     private fun emitEffect(effect: AppEffect) {
         scope.launch { _effect.emit(effect) }

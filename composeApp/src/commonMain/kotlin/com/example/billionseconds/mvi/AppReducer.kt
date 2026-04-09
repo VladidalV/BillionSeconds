@@ -72,6 +72,10 @@ object AppReducer {
         is AppIntent.WriteLetterClicked -> state
         is AppIntent.AddFamilyClicked   -> state
 
+        // Life Stats screen — lifecycle (side effects in Store)
+        is AppIntent.LifeStatsScreenStarted -> state
+        is AppIntent.LifeStatsScreenResumed -> state
+
         // Navigation
         is AppIntent.BackClicked -> state // ExitApp effect emitted in AppStore
     }

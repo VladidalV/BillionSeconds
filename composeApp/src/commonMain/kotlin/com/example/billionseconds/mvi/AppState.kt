@@ -27,5 +27,8 @@ data class AppState(
     val error: String? = null,
 
     // Countdown screen
-    val countdown: CountdownUiState = CountdownUiState()
+    val countdown: CountdownUiState = CountdownUiState(),
+
+    // Life Stats screen
+    val lifeStats: LifeStatsUiState = LifeStatsUiState()
 )
