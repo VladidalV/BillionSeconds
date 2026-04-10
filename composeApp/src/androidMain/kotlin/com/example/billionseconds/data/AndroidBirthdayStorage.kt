@@ -46,6 +46,13 @@ class AndroidBirthdayStorage(context: Context) : BirthdayStorage {
     override fun setUnknownTime(value: Boolean) {
         prefs.edit().putBoolean("unknown_time", value).apply()
     }
+
+    override fun getLastSeenMilestoneId(): String? =
+        prefs.getString("last_seen_milestone_id", null)
+
+    override fun setLastSeenMilestoneId(id: String) {
+        prefs.edit().putString("last_seen_milestone_id", id).apply()
+    }
 }
 
 object AppContext {

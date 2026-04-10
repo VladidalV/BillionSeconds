@@ -10,6 +10,8 @@ interface BirthdayStorage {
     fun setOnboardingCompleted(value: Boolean)
     fun isUnknownTime(): Boolean
     fun setUnknownTime(value: Boolean)
+    fun getLastSeenMilestoneId(): String?
+    fun setLastSeenMilestoneId(id: String)
 }
 
 expect fun createBirthdayStorage(): BirthdayStorage

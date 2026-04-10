@@ -44,6 +44,13 @@ class WebBirthdayStorage : BirthdayStorage {
     override fun setUnknownTime(value: Boolean) {
         localStorage.setItem("unknown_time", if (value) "true" else "false")
     }
+
+    override fun getLastSeenMilestoneId(): String? =
+        localStorage.getItem("last_seen_milestone_id")
+
+    override fun setLastSeenMilestoneId(id: String) {
+        localStorage.setItem("last_seen_milestone_id", id)
+    }
 }
 
 actual fun createBirthdayStorage(): BirthdayStorage = WebBirthdayStorage()

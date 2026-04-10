@@ -7,6 +7,10 @@ import com.example.billionseconds.domain.BirthdayValidator
 import com.example.billionseconds.domain.CountdownFormatter
 import com.example.billionseconds.domain.LifeStatsCalculator
 import com.example.billionseconds.domain.LifeStatsFormatter
+import com.example.billionseconds.domain.MilestoneConfig
+import com.example.billionseconds.domain.MilestoneStatus
+import com.example.billionseconds.domain.MilestonesCalculator
+import com.example.billionseconds.domain.MilestonesFormatter
 import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
 import com.example.billionseconds.navigation.AppScreen
@@ -54,7 +58,8 @@ class AppStore(private val repository: BirthdayRepository) {
                 secondsRemaining = result.secondsRemaining,
                 showMainResult = true,
                 countdown  = buildCountdownUiState(result, unknownTime, now),
-                lifeStats  = buildLifeStatsUiState(saved, result, unknownTime, now)
+                lifeStats  = buildLifeStatsUiState(saved, result, unknownTime, now),
+                milestones = buildMilestonesUiState(saved, unknownTime, now)
             )
             startTick(result.milestoneInstant)
         }
@@ -71,6 +76,9 @@ class AppStore(private val repository: BirthdayRepository) {
             is AppIntent.CountdownScreenResumed     -> onCountdownResumed()
             is AppIntent.LifeStatsScreenStarted     -> onLifeStatsResumed()
             is AppIntent.LifeStatsScreenResumed     -> onLifeStatsResumed()
+            is AppIntent.MilestonesScreenStarted    -> onMilestonesResumed()
+            is AppIntent.MilestonesScreenResumed    -> onMilestonesResumed()
+            is AppIntent.MilestoneShareClicked      -> onMilestoneShareClicked(intent.id)
             is AppIntent.ShareClicked               -> onShare()
             is AppIntent.CreateVideoClicked         -> emitEffect(AppEffect.ShowComingSoon("create_video"))
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
@@ -131,7 +139,8 @@ class AppStore(private val repository: BirthdayRepository) {
                 screen       = AppScreen.Main(MainTab.Home),
                 showMainResult = true,
                 countdown    = buildCountdownUiState(result, s.unknownTime, now),
-                lifeStats    = buildLifeStatsUiState(data, result, s.unknownTime, now)
+                lifeStats    = buildLifeStatsUiState(data, result, s.unknownTime, now),
+                milestones   = buildMilestonesUiState(data, s.unknownTime, now)
             )
         }
         startTick(milestone)
@@ -159,7 +168,8 @@ class AppStore(private val repository: BirthdayRepository) {
                     showMainResult     = true,
                     error              = null,
                     countdown  = buildCountdownUiState(result, s.unknownTime, now),
-                    lifeStats  = buildLifeStatsUiState(data, result, s.unknownTime, now)
+                    lifeStats  = buildLifeStatsUiState(data, result, s.unknownTime, now),
+                    milestones = buildMilestonesUiState(data, s.unknownTime, now)
                 )
             }
             startTick(result.milestoneInstant)
@@ -201,6 +211,32 @@ class AppStore(private val repository: BirthdayRepository) {
         }
     }
 
+    // ── Milestones screen ─────────────────────────────────────────────────────
+
+    private fun onMilestonesResumed() {
+        val s = _state.value
+        val saved = repository.getBirthday() ?: run {
+            _state.update {
+                it.copy(milestones = MilestonesUiState(isLoading = false, error = MilestonesError.NoBirthData))
+            }
+            return
+        }
+        val now = currentInstant()
+        val newState = buildMilestonesUiState(saved, s.unknownTime, now)
+        _state.update { it.copy(milestones = newState) }
+        // Детект newly reached при открытии экрана
+        newState.celebrationAvailableId?.let { id ->
+            repository.setLastSeenMilestoneId(id)
+            emitEffect(AppEffect.ShowMilestoneCelebration(id))
+        }
+    }
+
+    private fun onMilestoneShareClicked(id: String) {
+        val item = _state.value.milestones.milestones.firstOrNull { it.id == id } ?: return
+        val text = "Я достиг вехи «${item.title}»! \uD83C\uDF89 #BillionSeconds"
+        emitEffect(AppEffect.ShareMilestone(id, text))
+    }
+
     // ── Share ─────────────────────────────────────────────────────────────────
 
     private fun onShare() {
@@ -226,12 +262,22 @@ class AppStore(private val repository: BirthdayRepository) {
                 val saved = repository.getBirthday()
                 if (saved != null) {
                     val result = BillionSecondsCalculator.computeAll(saved, now)
+                    val newMilestones = buildMilestonesUiState(saved, s.unknownTime, now)
+                    // Детект newly reached в тике
+                    val newlyReachedId = newMilestones.celebrationAvailableId
+                    if (newlyReachedId != null) {
+                        repository.setLastSeenMilestoneId(newlyReachedId)
+                        emitEffect(AppEffect.ShowMilestoneCelebration(newlyReachedId))
+                    }
                     _state.update {
                         it.copy(
                             isMilestoneReached = result.isMilestoneReached,
                             secondsRemaining   = result.secondsRemaining,
                             countdown  = buildCountdownUiState(result, s.unknownTime, now),
-                            lifeStats  = buildLifeStatsUiState(saved, result, s.unknownTime, now)
+                            lifeStats  = buildLifeStatsUiState(saved, result, s.unknownTime, now),
+                            milestones = if (newlyReachedId != null)
+                                newMilestones.copy(celebrationAvailableId = null)
+                            else newMilestones
                         )
                     }
                 }
@@ -344,6 +390,62 @@ class AppStore(private val repository: BirthdayRepository) {
             exactStats         = exactStats,
             approximateStats   = approximateStats,
             error              = null
+        )
+    }
+
+    private fun buildMilestonesUiState(
+        data: BirthdayData,
+        unknownTime: Boolean,
+        now: Instant
+    ): MilestonesUiState {
+        val lastSeenId = repository.getLastSeenMilestoneId()
+        val calcResult = MilestonesCalculator.compute(
+            birthData        = data,
+            now              = now,
+            isUnknownTime    = unknownTime,
+            lastSeenReachedId = lastSeenId
+        )
+
+        val items = calcResult.milestones.map { um ->
+            val isApprox = unknownTime
+            MilestoneUiItem(
+                id          = um.definition.id,
+                title       = um.definition.title,
+                shortTitle  = um.definition.shortTitle,
+                targetDateText = MilestonesFormatter.formatTargetDate(um.targetInstant, isApprox),
+                statusLabel = when (um.status) {
+                    is MilestoneStatus.Reached  -> "Достигнуто"
+                    is MilestoneStatus.Next     -> "Следующее"
+                    is MilestoneStatus.Upcoming -> "Впереди"
+                },
+                progressText = when (um.status) {
+                    is MilestoneStatus.Next -> MilestonesFormatter.formatProgress(um.progressFromPrev)
+                    else                    -> ""
+                },
+                remainingText = when (um.status) {
+                    is MilestoneStatus.Next -> "осталось ${MilestonesFormatter.formatRemaining(um.secondsRemaining)}"
+                    else                    -> ""
+                },
+                reachedDateText = when (um.status) {
+                    is MilestoneStatus.Reached -> MilestonesFormatter.formatReachedDate(um.targetInstant)
+                    else                       -> ""
+                },
+                status       = um.status,
+                isPrimary    = um.definition.isPrimary,
+                isShareable  = um.definition.isShareable,
+                hasApproximateDisclaimer = isApprox
+            )
+        }
+
+        val highlightedId = calcResult.nextMilestoneId ?: calcResult.lastReachedId
+
+        return MilestonesUiState(
+            isLoading              = false,
+            milestones             = items,
+            highlightedId          = highlightedId,
+            isApproximateMode      = unknownTime,
+            celebrationAvailableId = calcResult.newlyReachedId,
+            error                  = null
         )
     }
 

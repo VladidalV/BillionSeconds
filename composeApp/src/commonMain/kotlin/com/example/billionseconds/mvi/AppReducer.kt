@@ -76,6 +76,16 @@ object AppReducer {
         is AppIntent.LifeStatsScreenStarted -> state
         is AppIntent.LifeStatsScreenResumed -> state
 
+        // Milestones screen — lifecycle (side effects in Store)
+        is AppIntent.MilestonesScreenStarted -> state
+        is AppIntent.MilestonesScreenResumed -> state
+
+        // Milestones screen — actions
+        is AppIntent.MilestoneClicked           -> state
+        is AppIntent.MilestoneShareClicked      -> state
+        is AppIntent.MilestoneCelebrationDismissed ->
+            state.copy(milestones = state.milestones.copy(celebrationAvailableId = null))
+
         // Navigation
         is AppIntent.BackClicked -> state // ExitApp effect emitted in AppStore
     }

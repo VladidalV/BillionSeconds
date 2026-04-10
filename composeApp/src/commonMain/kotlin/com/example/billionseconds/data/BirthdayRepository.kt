@@ -10,4 +10,6 @@ class BirthdayRepository(private val storage: BirthdayStorage) {
     fun setOnboardingCompleted(value: Boolean) = storage.setOnboardingCompleted(value)
     fun isUnknownTime(): Boolean = storage.isUnknownTime()
     fun setUnknownTime(value: Boolean) = storage.setUnknownTime(value)
+    fun getLastSeenMilestoneId(): String? = storage.getLastSeenMilestoneId()
+    fun setLastSeenMilestoneId(id: String) = storage.setLastSeenMilestoneId(id)
 }

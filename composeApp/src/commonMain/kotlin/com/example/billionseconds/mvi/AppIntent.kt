@@ -39,6 +39,15 @@ sealed class AppIntent {
     data object LifeStatsScreenStarted : AppIntent()
     data object LifeStatsScreenResumed : AppIntent()
 
+    // Milestones screen — lifecycle
+    data object MilestonesScreenStarted : AppIntent()
+    data object MilestonesScreenResumed : AppIntent()
+
+    // Milestones screen — actions
+    data class MilestoneClicked(val id: String)      : AppIntent()
+    data class MilestoneShareClicked(val id: String) : AppIntent()
+    data object MilestoneCelebrationDismissed        : AppIntent()
+
     // Navigation
     data object BackClicked : AppIntent()
 }

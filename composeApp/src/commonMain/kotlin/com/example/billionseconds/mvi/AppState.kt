@@ -30,5 +30,8 @@ data class AppState(
     val countdown: CountdownUiState = CountdownUiState(),
 
     // Life Stats screen
-    val lifeStats: LifeStatsUiState = LifeStatsUiState()
+    val lifeStats: LifeStatsUiState = LifeStatsUiState(),
+
+    // Milestones screen
+    val milestones: MilestonesUiState = MilestonesUiState()
 )

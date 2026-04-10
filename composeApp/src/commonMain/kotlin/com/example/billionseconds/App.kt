@@ -25,15 +25,18 @@ fun App() {
     val state by store.state.collectAsState()
 
     var comingSoonFeature by remember { mutableStateOf<String?>(null) }
+    var celebrationMilestoneId by remember { mutableStateOf<String?>(null) }
 
     // Обработка одноразовых эффектов
     LaunchedEffect(store) {
         store.effect.collect { effect ->
             when (effect) {
-                is AppEffect.ExitApp        -> exitApp()
-                is AppEffect.ShareText      -> shareText(effect.text)
-                is AppEffect.ShowComingSoon -> comingSoonFeature = effect.feature
-                is AppEffect.ShowError      -> Unit // TODO: snackbar
+                is AppEffect.ExitApp                  -> exitApp()
+                is AppEffect.ShareText                -> shareText(effect.text)
+                is AppEffect.ShowComingSoon           -> comingSoonFeature = effect.feature
+                is AppEffect.ShowError                -> Unit // TODO: snackbar
+                is AppEffect.ShowMilestoneCelebration -> celebrationMilestoneId = effect.milestoneId
+                is AppEffect.ShareMilestone           -> shareText(effect.text)
             }
         }
     }

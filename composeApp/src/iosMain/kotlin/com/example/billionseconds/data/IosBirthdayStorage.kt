@@ -45,6 +45,13 @@ class IosBirthdayStorage : BirthdayStorage {
     override fun setUnknownTime(value: Boolean) {
         defaults.setBool(value, "unknown_time")
     }
+
+    override fun getLastSeenMilestoneId(): String? =
+        defaults.stringForKey("last_seen_milestone_id")
+
+    override fun setLastSeenMilestoneId(id: String) {
+        defaults.setObject(id, "last_seen_milestone_id")
+    }
 }
 
 actual fun createBirthdayStorage(): BirthdayStorage = IosBirthdayStorage()

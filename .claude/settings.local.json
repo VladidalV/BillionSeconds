@@ -28,7 +28,8 @@
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:compileKotlinWasmJs --no-configuration-cache)",
       "Bash(./gradlew :composeApp:compileKotlinWasmJs :composeApp:compileKotlinJs --no-configuration-cache)",
       "Bash(./gradlew compileKotlinAndroid)",
-      "Bash(./gradlew :composeApp:testDebugUnitTest)"
+      "Bash(./gradlew :composeApp:testDebugUnitTest)",
+      "Bash(./gradlew :composeApp:compileKotlinIosArm64)"
     ]
   }
 }
