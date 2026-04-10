@@ -1,10 +1,17 @@
 package com.example.billionseconds.mvi
 
 import com.example.billionseconds.data.BirthdayRepository
+import com.example.billionseconds.data.FamilyProfileRepository
 import com.example.billionseconds.data.model.BirthdayData
+import com.example.billionseconds.data.model.FamilyProfile
+import com.example.billionseconds.data.model.RelationType
+import com.example.billionseconds.data.model.toBirthdayData
 import com.example.billionseconds.domain.BillionSecondsCalculator
 import com.example.billionseconds.domain.BirthdayValidator
 import com.example.billionseconds.domain.CountdownFormatter
+import com.example.billionseconds.domain.FamilyProfileCalculator
+import com.example.billionseconds.domain.FamilyProfileFormatter
+import com.example.billionseconds.domain.FamilyProfileValidator
 import com.example.billionseconds.domain.LifeStatsCalculator
 import com.example.billionseconds.domain.LifeStatsFormatter
 import com.example.billionseconds.domain.MilestoneConfig
@@ -20,7 +27,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.datetime.Instant
 
-class AppStore(private val repository: BirthdayRepository) {
+private const val MAX_PROFILES = 5
+private const val PRIMARY_PROFILE_ID = "self_primary"
+
+class AppStore(
+    private val repository: BirthdayRepository,
+    private val familyRepository: FamilyProfileRepository
+) {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val _state = MutableStateFlow(AppState())
@@ -40,28 +53,36 @@ class AppStore(private val repository: BirthdayRepository) {
             repository.setOnboardingCompleted(true)
         }
 
-        if (repository.isOnboardingCompleted() && saved != null) {
-            val now = currentInstant()
-            val result = BillionSecondsCalculator.computeAll(saved, now)
-            val unknownTime = repository.isUnknownTime()
-            _state.value = AppState(
-                screen = AppScreen.Main(MainTab.Home),
-                year = saved.year,
-                month = saved.month,
-                day = saved.day,
-                hour = saved.hour,
-                minute = saved.minute,
-                unknownTime = unknownTime,
-                milestoneInstant = result.milestoneInstant,
-                progressPercent = result.progressPercent,
-                isMilestoneReached = result.isMilestoneReached,
-                secondsRemaining = result.secondsRemaining,
-                showMainResult = true,
-                countdown  = buildCountdownUiState(result, unknownTime, now),
-                lifeStats  = buildLifeStatsUiState(saved, result, unknownTime, now),
-                milestones = buildMilestonesUiState(saved, unknownTime, now)
-            )
-            startTick(result.milestoneInstant)
+        // Миграция legacy birthday данных в FamilyProfile
+        migrateLegacyBirthdayToFamily()
+
+        if (repository.isOnboardingCompleted()) {
+            val activeProfile = getActiveProfileOrFallback()
+            if (activeProfile != null) {
+                val now = currentInstant()
+                val birthData = activeProfile.toBirthdayData()
+                val result = BillionSecondsCalculator.computeAll(birthData, now)
+                val unknownTime = activeProfile.unknownBirthTime
+                _state.value = AppState(
+                    screen = AppScreen.Main(MainTab.Home),
+                    year = activeProfile.birthYear,
+                    month = activeProfile.birthMonth,
+                    day = activeProfile.birthDay,
+                    hour = activeProfile.birthHour,
+                    minute = activeProfile.birthMinute,
+                    unknownTime = unknownTime,
+                    milestoneInstant = result.milestoneInstant,
+                    progressPercent = result.progressPercent,
+                    isMilestoneReached = result.isMilestoneReached,
+                    secondsRemaining = result.secondsRemaining,
+                    showMainResult = true,
+                    countdown  = buildCountdownUiState(result, unknownTime, now),
+                    lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
+                    milestones = buildMilestonesUiState(birthData, unknownTime, now),
+                    family     = buildFamilyUiState(now)
+                )
+                startTick(result.milestoneInstant)
+            }
         }
     }
 
@@ -79,6 +100,13 @@ class AppStore(private val repository: BirthdayRepository) {
             is AppIntent.MilestonesScreenStarted    -> onMilestonesResumed()
             is AppIntent.MilestonesScreenResumed    -> onMilestonesResumed()
             is AppIntent.MilestoneShareClicked      -> onMilestoneShareClicked(intent.id)
+            is AppIntent.FamilyScreenStarted        -> onFamilyScreenResumed()
+            is AppIntent.FamilyScreenResumed        -> onFamilyScreenResumed()
+            is AppIntent.AddProfileClicked          -> onFamilyAddProfileClicked()
+            is AppIntent.EditProfileClicked         -> onFamilyEditProfileClicked(intent.id)
+            is AppIntent.DeleteConfirmed            -> onFamilyDeleteConfirmed()
+            is AppIntent.SetActiveProfileClicked    -> onFamilySetActiveProfile(intent.id)
+            is AppIntent.FormSaveClicked            -> onFamilyFormSave()
             is AppIntent.ShareClicked               -> onShare()
             is AppIntent.CreateVideoClicked         -> emitEffect(AppEffect.ShowComingSoon("create_video"))
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
@@ -133,14 +161,19 @@ class AppStore(private val repository: BirthdayRepository) {
         val milestone = s.milestoneInstant ?: return
         val now = currentInstant()
         val data = BirthdayData(s.year!!, s.month!!, s.day!!, s.hour, s.minute)
+
+        // Создаём primary FamilyProfile из данных онбординга
+        migrateLegacyBirthdayToFamily()
+
         val result = BillionSecondsCalculator.computeAll(data, now)
         _state.update {
             it.copy(
-                screen       = AppScreen.Main(MainTab.Home),
+                screen         = AppScreen.Main(MainTab.Home),
                 showMainResult = true,
                 countdown    = buildCountdownUiState(result, s.unknownTime, now),
                 lifeStats    = buildLifeStatsUiState(data, result, s.unknownTime, now),
-                milestones   = buildMilestonesUiState(data, s.unknownTime, now)
+                milestones   = buildMilestonesUiState(data, s.unknownTime, now),
+                family       = buildFamilyUiState(now)
             )
         }
         startTick(milestone)
@@ -187,42 +220,43 @@ class AppStore(private val repository: BirthdayRepository) {
     // ── Countdown screen ──────────────────────────────────────────────────────
 
     private fun onCountdownResumed() {
-        val s = _state.value
-        val saved = repository.getBirthday() ?: return
+        val activeProfile = getActiveProfileOrFallback() ?: return
         val now = currentInstant()
-        val result = BillionSecondsCalculator.computeAll(saved, now)
+        val birthData = activeProfile.toBirthdayData()
+        val result = BillionSecondsCalculator.computeAll(birthData, now)
         _state.update {
-            it.copy(countdown = buildCountdownUiState(result, s.unknownTime, now))
+            it.copy(countdown = buildCountdownUiState(result, activeProfile.unknownBirthTime, now))
         }
     }
 
     // ── Life Stats screen ─────────────────────────────────────────────────────
 
     private fun onLifeStatsResumed() {
-        val s = _state.value
-        val saved = repository.getBirthday() ?: run {
+        val activeProfile = getActiveProfileOrFallback() ?: run {
             _state.update { it.copy(lifeStats = LifeStatsUiState(isLoading = false, error = LifeStatsError.NoBirthData)) }
             return
         }
         val now = currentInstant()
-        val result = BillionSecondsCalculator.computeAll(saved, now)
+        val birthData = activeProfile.toBirthdayData()
+        val result = BillionSecondsCalculator.computeAll(birthData, now)
         _state.update {
-            it.copy(lifeStats = buildLifeStatsUiState(saved, result, s.unknownTime, now))
+            it.copy(lifeStats = buildLifeStatsUiState(birthData, result, activeProfile.unknownBirthTime, now))
         }
     }
 
     // ── Milestones screen ─────────────────────────────────────────────────────
 
     private fun onMilestonesResumed() {
-        val s = _state.value
-        val saved = repository.getBirthday() ?: run {
+        val activeProfile = getActiveProfileOrFallback() ?: run {
             _state.update {
                 it.copy(milestones = MilestonesUiState(isLoading = false, error = MilestonesError.NoBirthData))
             }
             return
         }
         val now = currentInstant()
-        val newState = buildMilestonesUiState(saved, s.unknownTime, now)
+        val birthData = activeProfile.toBirthdayData()
+        val unknownTime = activeProfile.unknownBirthTime
+        val newState = buildMilestonesUiState(birthData, unknownTime, now)
         _state.update { it.copy(milestones = newState) }
         // Детект newly reached при открытии экрана
         newState.celebrationAvailableId?.let { id ->
@@ -235,6 +269,202 @@ class AppStore(private val repository: BirthdayRepository) {
         val item = _state.value.milestones.milestones.firstOrNull { it.id == id } ?: return
         val text = "Я достиг вехи «${item.title}»! \uD83C\uDF89 #BillionSeconds"
         emitEffect(AppEffect.ShareMilestone(id, text))
+    }
+
+    // ── Family screen ─────────────────────────────────────────────────────────
+
+    private fun onFamilyScreenResumed() {
+        val now = currentInstant()
+        _state.update { it.copy(family = buildFamilyUiState(now)) }
+    }
+
+    private fun onFamilyAddProfileClicked() {
+        val profiles = familyRepository.loadProfiles()
+        if (profiles.size >= MAX_PROFILES) {
+            emitEffect(AppEffect.ShowFamilyError("Достигнут лимит профилей (максимум $MAX_PROFILES)"))
+            return
+        }
+        _state.update {
+            it.copy(family = it.family.copy(
+                subScreen = FamilySubScreen.CreateForm,
+                formDraft = ProfileFormDraft()
+            ))
+        }
+    }
+
+    private fun onFamilyEditProfileClicked(id: String) {
+        val profile = familyRepository.getProfileById(id) ?: return
+        _state.update {
+            it.copy(family = it.family.copy(
+                subScreen = FamilySubScreen.EditForm(id),
+                formDraft = ProfileFormDraft(
+                    profileId        = id,
+                    name             = profile.name,
+                    relationType     = profile.relationType,
+                    customRelationName = profile.customRelationName ?: "",
+                    year             = profile.birthYear,
+                    month            = profile.birthMonth,
+                    day              = profile.birthDay,
+                    hour             = profile.birthHour,
+                    minute           = profile.birthMinute,
+                    unknownBirthTime = profile.unknownBirthTime
+                )
+            ))
+        }
+    }
+
+    private fun onFamilyFormSave() {
+        val draft = _state.value.family.formDraft ?: return
+        val now = currentInstant()
+
+        val nameError = FamilyProfileValidator.validateName(draft.name)
+        val dateError = FamilyProfileValidator.validateBirthDate(draft.year, draft.month, draft.day, now)
+
+        if (nameError != null || dateError != null) {
+            _state.update {
+                it.copy(family = it.family.copy(
+                    formDraft = draft.copy(
+                        nameError = nameError?.let { e -> FamilyProfileValidator.errorMessage(e) },
+                        dateError = dateError?.let { e -> FamilyProfileValidator.errorMessage(e) }
+                    )
+                ))
+            }
+            return
+        }
+
+        val profiles = familyRepository.loadProfiles().toMutableList()
+        val isCreate = draft.profileId == null
+        val customName = if (draft.relationType == RelationType.OTHER)
+            draft.customRelationName.trim().takeIf { it.isNotEmpty() }
+        else null
+
+        if (isCreate) {
+            val newProfile = FamilyProfile(
+                id                 = generateProfileId(),
+                name               = draft.name.trim(),
+                relationType       = draft.relationType,
+                customRelationName = customName,
+                birthYear          = draft.year!!,
+                birthMonth         = draft.month!!,
+                birthDay           = draft.day!!,
+                birthHour          = draft.hour,
+                birthMinute        = draft.minute,
+                unknownBirthTime   = draft.unknownBirthTime,
+                isPrimary          = false,
+                sortOrder          = profiles.size,
+                createdAtEpochSeconds = now.epochSeconds
+            )
+            profiles.add(newProfile)
+        } else {
+            val idx = profiles.indexOfFirst { it.id == draft.profileId }
+            if (idx < 0) return
+            profiles[idx] = profiles[idx].copy(
+                name               = draft.name.trim(),
+                relationType       = draft.relationType,
+                customRelationName = customName,
+                birthYear          = draft.year!!,
+                birthMonth         = draft.month!!,
+                birthDay           = draft.day!!,
+                birthHour          = draft.hour,
+                birthMinute        = draft.minute,
+                unknownBirthTime   = draft.unknownBirthTime
+            )
+        }
+
+        familyRepository.saveProfiles(profiles)
+
+        // Если обновлён активный профиль — пересчитать все sub-states
+        val activeId = familyRepository.getActiveProfileId()
+        val updatedActiveProfile = if (!isCreate && draft.profileId == activeId) {
+            profiles.firstOrNull { it.id == activeId }
+        } else null
+
+        if (updatedActiveProfile != null) {
+            val birthData = updatedActiveProfile.toBirthdayData()
+            val result = BillionSecondsCalculator.computeAll(birthData, now)
+            val unknownTime = updatedActiveProfile.unknownBirthTime
+            _state.update {
+                it.copy(
+                    countdown  = buildCountdownUiState(result, unknownTime, now),
+                    lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
+                    milestones = buildMilestonesUiState(birthData, unknownTime, now),
+                    family     = buildFamilyUiState(now).copy(
+                        subScreen = FamilySubScreen.List,
+                        formDraft = null
+                    )
+                )
+            }
+            startTick(result.milestoneInstant)
+        } else {
+            _state.update {
+                it.copy(family = buildFamilyUiState(now).copy(
+                    subScreen = FamilySubScreen.List,
+                    formDraft = null
+                ))
+            }
+        }
+    }
+
+    private fun onFamilyDeleteConfirmed() {
+        val pendingId = _state.value.family.pendingDeleteId ?: return
+        val profiles = familyRepository.loadProfiles().toMutableList()
+        val toDelete = profiles.firstOrNull { it.id == pendingId } ?: return
+        // Safety: нельзя удалить primary или единственный профиль
+        if (toDelete.isPrimary || profiles.size <= 1) return
+
+        profiles.removeAll { it.id == pendingId }
+        familyRepository.saveProfiles(profiles)
+
+        val activeId = familyRepository.getActiveProfileId()
+        val now = currentInstant()
+
+        if (activeId == pendingId) {
+            // Auto-select primary (или первый оставшийся)
+            val newActive = profiles.firstOrNull { it.isPrimary } ?: profiles.first()
+            familyRepository.setActiveProfileId(newActive.id)
+            val birthData = newActive.toBirthdayData()
+            val result = BillionSecondsCalculator.computeAll(birthData, now)
+            val unknownTime = newActive.unknownBirthTime
+            _state.update {
+                it.copy(
+                    countdown  = buildCountdownUiState(result, unknownTime, now),
+                    lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
+                    milestones = buildMilestonesUiState(birthData, unknownTime, now),
+                    family     = buildFamilyUiState(now).copy(
+                        pendingDeleteId = null,
+                        isDeleteConfirmationVisible = false
+                    )
+                )
+            }
+            emitEffect(AppEffect.ActiveProfileChanged(newActive.id))
+            startTick(result.milestoneInstant)
+        } else {
+            _state.update {
+                it.copy(family = buildFamilyUiState(now).copy(
+                    pendingDeleteId = null,
+                    isDeleteConfirmationVisible = false
+                ))
+            }
+        }
+    }
+
+    private fun onFamilySetActiveProfile(id: String) {
+        val profile = familyRepository.getProfileById(id) ?: return
+        familyRepository.setActiveProfileId(id)
+        val now = currentInstant()
+        val birthData = profile.toBirthdayData()
+        val result = BillionSecondsCalculator.computeAll(birthData, now)
+        val unknownTime = profile.unknownBirthTime
+        _state.update {
+            it.copy(
+                countdown  = buildCountdownUiState(result, unknownTime, now),
+                lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
+                milestones = buildMilestonesUiState(birthData, unknownTime, now),
+                family     = buildFamilyUiState(now)
+            )
+        }
+        emitEffect(AppEffect.ActiveProfileChanged(id))
+        startTick(result.milestoneInstant)
     }
 
     // ── Share ─────────────────────────────────────────────────────────────────
@@ -258,31 +488,69 @@ class AppStore(private val repository: BirthdayRepository) {
             while (true) {
                 delay(1000)
                 val now = currentInstant()
-                val s = _state.value
-                val saved = repository.getBirthday()
-                if (saved != null) {
-                    val result = BillionSecondsCalculator.computeAll(saved, now)
-                    val newMilestones = buildMilestonesUiState(saved, s.unknownTime, now)
-                    // Детект newly reached в тике
-                    val newlyReachedId = newMilestones.celebrationAvailableId
-                    if (newlyReachedId != null) {
-                        repository.setLastSeenMilestoneId(newlyReachedId)
-                        emitEffect(AppEffect.ShowMilestoneCelebration(newlyReachedId))
-                    }
-                    _state.update {
-                        it.copy(
-                            isMilestoneReached = result.isMilestoneReached,
-                            secondsRemaining   = result.secondsRemaining,
-                            countdown  = buildCountdownUiState(result, s.unknownTime, now),
-                            lifeStats  = buildLifeStatsUiState(saved, result, s.unknownTime, now),
-                            milestones = if (newlyReachedId != null)
-                                newMilestones.copy(celebrationAvailableId = null)
-                            else newMilestones
-                        )
-                    }
+                val activeProfile = getActiveProfileOrFallback() ?: continue
+                val birthData = activeProfile.toBirthdayData()
+                val unknownTime = activeProfile.unknownBirthTime
+                val result = BillionSecondsCalculator.computeAll(birthData, now)
+                val newMilestones = buildMilestonesUiState(birthData, unknownTime, now)
+                // Детект newly reached в тике
+                val newlyReachedId = newMilestones.celebrationAvailableId
+                if (newlyReachedId != null) {
+                    repository.setLastSeenMilestoneId(newlyReachedId)
+                    emitEffect(AppEffect.ShowMilestoneCelebration(newlyReachedId))
+                }
+                _state.update {
+                    it.copy(
+                        isMilestoneReached = result.isMilestoneReached,
+                        secondsRemaining   = result.secondsRemaining,
+                        countdown  = buildCountdownUiState(result, unknownTime, now),
+                        lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
+                        milestones = if (newlyReachedId != null)
+                            newMilestones.copy(celebrationAvailableId = null)
+                        else newMilestones
+                    )
                 }
             }
         }
+    }
+
+    // ── Migration ─────────────────────────────────────────────────────────────
+
+    private fun migrateLegacyBirthdayToFamily() {
+        if (familyRepository.loadProfiles().isNotEmpty()) return
+        val legacy = repository.getBirthday() ?: return
+        val unknownTime = repository.isUnknownTime()
+        val primaryProfile = FamilyProfile(
+            id                    = PRIMARY_PROFILE_ID,
+            name                  = "Я",
+            relationType          = RelationType.SELF,
+            birthYear             = legacy.year,
+            birthMonth            = legacy.month,
+            birthDay              = legacy.day,
+            birthHour             = legacy.hour,
+            birthMinute           = legacy.minute,
+            unknownBirthTime      = unknownTime,
+            isPrimary             = true,
+            sortOrder             = 0,
+            createdAtEpochSeconds = currentInstant().epochSeconds
+        )
+        familyRepository.saveProfiles(listOf(primaryProfile))
+        familyRepository.setActiveProfileId(primaryProfile.id)
+    }
+
+    private fun getActiveProfileOrFallback(): FamilyProfile? {
+        val profiles = familyRepository.loadProfiles()
+        if (profiles.isEmpty()) return null
+        val activeId = familyRepository.getActiveProfileId()
+        return profiles.firstOrNull { it.id == activeId }
+            ?: profiles.firstOrNull { it.isPrimary }
+            ?: profiles.first()
+    }
+
+    private fun generateProfileId(): String {
+        val timestamp = currentInstant().epochSeconds
+        val random = kotlin.random.Random.nextLong().let { if (it < 0) -it else it }
+        return "${timestamp}_$random"
     }
 
     // ── Builders ──────────────────────────────────────────────────────────────
@@ -445,6 +713,40 @@ class AppStore(private val repository: BirthdayRepository) {
             highlightedId          = highlightedId,
             isApproximateMode      = unknownTime,
             celebrationAvailableId = calcResult.newlyReachedId,
+            error                  = null
+        )
+    }
+
+    private fun buildFamilyUiState(now: Instant): FamilyUiState {
+        val profiles = familyRepository.loadProfiles()
+        val activeId = familyRepository.getActiveProfileId()
+
+        val items = profiles.map { profile ->
+            val calcResult = FamilyProfileCalculator.compute(profile, now)
+            val isApprox = profile.unknownBirthTime
+            FamilyProfileUiItem(
+                id              = profile.id,
+                name            = profile.name,
+                relationLabel   = FamilyProfileFormatter.formatRelation(profile.relationType, profile.customRelationName),
+                relationEmoji   = profile.relationType.emoji,
+                birthDateText   = FamilyProfileFormatter.formatBirthDate(profile.birthYear, profile.birthMonth, profile.birthDay),
+                billionDateText = FamilyProfileFormatter.formatBillionDate(calcResult.milestoneInstant, isApprox),
+                progressText    = FamilyProfileFormatter.formatProgress(calcResult.progressPercent),
+                countdownText   = FamilyProfileFormatter.formatCountdown(calcResult.secondsRemaining, calcResult.isMilestoneReached),
+                isActive        = profile.id == activeId,
+                isPrimary       = profile.isPrimary,
+                isDeletable     = !profile.isPrimary && profiles.size > 1,
+                isEditable      = true,
+                hasApproximateTime = isApprox
+            )
+        }.sortedWith(compareBy({ !it.isPrimary }, { profiles.indexOfFirst { p -> p.id == it.id } }))
+
+        return FamilyUiState(
+            isLoading              = false,
+            profiles               = items,
+            activeProfileId        = activeId,
+            canAddMore             = profiles.size < MAX_PROFILES,
+            maxProfilesReached     = profiles.size >= MAX_PROFILES,
             error                  = null
         )
     }

@@ -41,7 +41,7 @@ fun MainScaffold(
             when (selectedTab) {
                 MainTab.Home       -> CountdownScreen(state = state, onIntent = onIntent)
                 MainTab.Stats      -> LifeStatsScreen(uiState = state.lifeStats, onIntent = onIntent)
-                MainTab.Family     -> FamilyScreen()
+                MainTab.Family     -> FamilyScreen(uiState = state.family, onIntent = onIntent)
                 MainTab.Milestones -> MilestonesScreen(uiState = state.milestones, onIntent = onIntent)
                 MainTab.Profile    -> ProfileScreen()
             }

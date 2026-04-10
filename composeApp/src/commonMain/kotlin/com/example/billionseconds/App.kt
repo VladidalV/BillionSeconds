@@ -3,7 +3,9 @@ package com.example.billionseconds
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import com.example.billionseconds.data.BirthdayRepository
+import com.example.billionseconds.data.FamilyProfileRepository
 import com.example.billionseconds.data.createBirthdayStorage
+import com.example.billionseconds.data.createFamilyProfileStorage
 import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppStore
 import com.example.billionseconds.navigation.AppScreen
@@ -16,7 +18,10 @@ import com.example.billionseconds.ui.shared.ComingSoonSheet
 @Composable
 fun App() {
     val store = remember {
-        AppStore(BirthdayRepository(createBirthdayStorage()))
+        AppStore(
+            repository       = BirthdayRepository(createBirthdayStorage()),
+            familyRepository = FamilyProfileRepository(createFamilyProfileStorage())
+        )
     }
     DisposableEffect(store) {
         onDispose { store.dispose() }
@@ -37,6 +42,8 @@ fun App() {
                 is AppEffect.ShowError                -> Unit // TODO: snackbar
                 is AppEffect.ShowMilestoneCelebration -> celebrationMilestoneId = effect.milestoneId
                 is AppEffect.ShareMilestone           -> shareText(effect.text)
+                is AppEffect.ActiveProfileChanged     -> Unit // TODO: snackbar "Переключено на профиль"
+                is AppEffect.ShowFamilyError          -> Unit // TODO: snackbar
             }
         }
     }

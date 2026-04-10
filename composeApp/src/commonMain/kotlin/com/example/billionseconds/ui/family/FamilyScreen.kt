@@ -1,38 +1,84 @@
 package com.example.billionseconds.ui.family
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import com.example.billionseconds.mvi.AppIntent
+import com.example.billionseconds.mvi.FamilySubScreen
+import com.example.billionseconds.mvi.FamilyUiState
 
 @Composable
-fun FamilyScreen(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67", style = MaterialTheme.typography.displayMedium)
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "Семейный раздел",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Скоро вы сможете добавить\nчленов семьи и следить\nза их миллиардами секунд.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+fun FamilyScreen(
+    uiState: FamilyUiState,
+    onIntent: (AppIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LaunchedEffect(Unit) {
+        onIntent(AppIntent.FamilyScreenStarted)
+    }
+
+    // Delete confirmation dialog
+    if (uiState.isDeleteConfirmationVisible) {
+        AlertDialog(
+            onDismissRequest = { onIntent(AppIntent.DeleteDismissed) },
+            title = { Text("Удалить профиль?") },
+            text = {
+                val name = uiState.profiles
+                    .firstOrNull { it.id == uiState.pendingDeleteId }?.name ?: ""
+                Text("Профиль «$name» будет удалён безвозвратно.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onIntent(AppIntent.DeleteConfirmed) }
+                ) {
+                    Text("Удалить", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onIntent(AppIntent.DeleteDismissed) }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
+    // Sub-screen routing
+    when (val sub = uiState.subScreen) {
+        is FamilySubScreen.List -> {
+            if (uiState.isLoading) {
+                // Loading placeholder — BuildFamilyUiState runs synchronously so this is brief
+                CircularProgressIndicator(modifier = modifier.fillMaxSize())
+            } else {
+                FamilyListContent(
+                    uiState = uiState,
+                    onIntent = onIntent,
+                    modifier = modifier
+                )
+            }
+        }
+        is FamilySubScreen.CreateForm -> {
+            val draft = uiState.formDraft
+            if (draft != null) {
+                FamilyProfileForm(
+                    draft = draft,
+                    isEdit = false,
+                    onIntent = onIntent,
+                    modifier = modifier
+                )
+            }
+        }
+        is FamilySubScreen.EditForm -> {
+            val draft = uiState.formDraft
+            if (draft != null) {
+                FamilyProfileForm(
+                    draft = draft,
+                    isEdit = true,
+                    onIntent = onIntent,
+                    modifier = modifier
+                )
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.data.model.RelationType
 import com.example.billionseconds.navigation.MainTab
 
 sealed class AppIntent {
@@ -47,6 +48,30 @@ sealed class AppIntent {
     data class MilestoneClicked(val id: String)      : AppIntent()
     data class MilestoneShareClicked(val id: String) : AppIntent()
     data object MilestoneCelebrationDismissed        : AppIntent()
+
+    // Family screen — lifecycle
+    data object FamilyScreenStarted : AppIntent()
+    data object FamilyScreenResumed : AppIntent()
+
+    // Family screen — list actions
+    data object AddProfileClicked                         : AppIntent()
+    data class  EditProfileClicked(val id: String)       : AppIntent()
+    data class  DeleteProfileClicked(val id: String)     : AppIntent()
+    data class  SetActiveProfileClicked(val id: String)  : AppIntent()
+
+    // Family screen — delete confirmation
+    data object DeleteConfirmed : AppIntent()
+    data object DeleteDismissed : AppIntent()
+
+    // Family screen — form (shared for create and edit)
+    data class  FormNameChanged(val name: String)                              : AppIntent()
+    data class  FormRelationTypeChanged(val type: RelationType)                : AppIntent()
+    data class  FormCustomRelationChanged(val name: String)                    : AppIntent()
+    data class  FormBirthDateChanged(val year: Int, val month: Int, val day: Int) : AppIntent()
+    data class  FormBirthTimeChanged(val hour: Int, val minute: Int)           : AppIntent()
+    data object FormUnknownTimeToggled : AppIntent()
+    data object FormSaveClicked        : AppIntent()
+    data object FormCancelClicked      : AppIntent()
 
     // Navigation
     data object BackClicked : AppIntent()
