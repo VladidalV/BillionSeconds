@@ -1,5 +1,6 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.mvi.event.EventUiState
 import com.example.billionseconds.navigation.AppScreen
 import kotlinx.datetime.Instant
 
@@ -39,5 +40,8 @@ data class AppState(
     val family: FamilyUiState = FamilyUiState(),
 
     // Profile screen
-    val profile: ProfileUiState = ProfileUiState()
+    val profile: ProfileUiState = ProfileUiState(),
+
+    // Event Screen
+    val event: EventUiState = EventUiState()
 )

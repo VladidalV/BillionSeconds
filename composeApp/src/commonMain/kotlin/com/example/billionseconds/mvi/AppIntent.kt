@@ -1,9 +1,8 @@
 package com.example.billionseconds.mvi
 
 import com.example.billionseconds.data.model.RelationType
+import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.navigation.MainTab
-
-
 
 sealed class AppIntent {
 
@@ -108,4 +107,32 @@ sealed class AppIntent {
     data object ClearAllDataClicked     : AppIntent()
     data object ConfirmDangerousAction  : AppIntent()
     data object DismissConfirmDialog    : AppIntent()
+
+    // Debug / Testing
+    data object DebugOpenEventScreen : AppIntent()
+
+    // Event Screen
+    sealed class Event : AppIntent() {
+        // Lifecycle
+        data class ScreenOpened(val profileId: String, val source: EventSource) : Event()
+        data object ScreenResumed : Event()
+        // Celebration lifecycle
+        data object CelebrationDisplayed : Event()   // анимация начала играть
+        data object CelebrationCompleted : Event()   // анимация завершилась
+        data object CelebrationSkipped : Event()     // пользователь нажал "Пропустить"
+        // User actions
+        data object ShareClicked : Event()
+        data object CreateVideoClicked : Event()
+        data object OpenMilestonesClicked : Event()
+        data object OpenStatsClicked : Event()
+        data object GoHomeClicked : Event()
+        data object NextMilestoneClicked : Event()
+        data object DismissClicked : Event()
+        data object BackPressed : Event()
+        data object RetryClicked : Event()
+        // System / internal
+        data object MarkSeenIfNeeded : Event()           // вызывается Store после ScreenOpened
+        data object MarkCelebrationShownIfNeeded : Event() // вызывается Store после CelebrationCompleted
+        data class ProfileChanged(val newProfileId: String) : Event()
+    }
 }

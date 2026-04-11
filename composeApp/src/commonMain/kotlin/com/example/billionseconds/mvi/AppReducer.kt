@@ -1,5 +1,7 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.domain.event.model.EventMode
+import com.example.billionseconds.mvi.event.EventScreenStatus
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.data.model.RelationType
@@ -276,6 +278,82 @@ object AppReducer {
                 confirmDialog = null,
                 isActionInProgress = false
             ))
+
+        // Debug
+        is AppIntent.DebugOpenEventScreen -> state
+
+        // Event Screen — reducer handles only pure state transitions
+        is AppIntent.Event.ScreenOpened ->
+            state.copy(
+                screen = AppScreen.EventScreen(intent.profileId, intent.source),
+                event = state.event.copy(
+                    isLoading    = true,
+                    screenStatus = EventScreenStatus.Loading,
+                    isBackAllowed = false,
+                    isCelebrationRunning = false,
+                    celebrationCompleted = false,
+                    source = intent.source,
+                    profileId = intent.profileId,
+                    uiModel = null,
+                    errorMessage = null
+                )
+            )
+
+        is AppIntent.Event.ScreenResumed -> state
+
+        is AppIntent.Event.CelebrationDisplayed ->
+            state.copy(event = state.event.copy(isCelebrationRunning = true))
+
+        is AppIntent.Event.CelebrationCompleted ->
+            state.copy(event = state.event.copy(
+                isCelebrationRunning = false,
+                celebrationCompleted = true,
+                isBackAllowed = true
+            ))
+
+        is AppIntent.Event.CelebrationSkipped ->
+            state.copy(event = state.event.copy(
+                isCelebrationRunning = false,
+                celebrationCompleted = true,
+                isBackAllowed = true
+            ))
+
+        // User actions — side effects handled in Store
+        is AppIntent.Event.ShareClicked          -> state
+        is AppIntent.Event.CreateVideoClicked    -> state
+        is AppIntent.Event.OpenMilestonesClicked -> state
+        is AppIntent.Event.OpenStatsClicked      -> state
+        is AppIntent.Event.NextMilestoneClicked  -> state
+        is AppIntent.Event.RetryClicked          -> state
+
+        is AppIntent.Event.GoHomeClicked ->
+            state.copy(
+                screen = AppScreen.Main(),
+                event = state.event.copy(autoOpenTriggered = false)
+            )
+
+        is AppIntent.Event.DismissClicked ->
+            if (state.event.isBackAllowed || state.event.mode == EventMode.REPEAT)
+                state.copy(
+                    screen = AppScreen.Main(),
+                    event = state.event.copy(autoOpenTriggered = false)
+                )
+            else state  // dismiss заблокирован до завершения celebration
+
+        is AppIntent.Event.BackPressed ->
+            if (state.event.isBackAllowed || state.event.mode == EventMode.REPEAT)
+                state.copy(
+                    screen = AppScreen.Main(),
+                    event = state.event.copy(autoOpenTriggered = false)
+                )
+            else state  // back заблокирован во время first-time celebration
+
+        // System intents — side effects only in Store
+        is AppIntent.Event.MarkSeenIfNeeded            -> state
+        is AppIntent.Event.MarkCelebrationShownIfNeeded -> state
+
+        is AppIntent.Event.ProfileChanged ->
+            state.copy(event = state.event.copy(autoOpenTriggered = false))
     }
 }
 

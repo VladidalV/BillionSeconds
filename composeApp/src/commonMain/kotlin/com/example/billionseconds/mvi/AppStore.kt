@@ -3,6 +3,7 @@ package com.example.billionseconds.mvi
 import com.example.billionseconds.data.AppSettingsRepository
 import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.FamilyProfileRepository
+import com.example.billionseconds.data.event.EventHistoryRepository
 import com.example.billionseconds.data.model.BirthdayData
 import com.example.billionseconds.data.model.FamilyProfile
 import com.example.billionseconds.data.model.RelationType
@@ -19,8 +20,16 @@ import com.example.billionseconds.domain.MilestoneConfig
 import com.example.billionseconds.domain.MilestoneStatus
 import com.example.billionseconds.domain.MilestonesCalculator
 import com.example.billionseconds.domain.MilestonesFormatter
+import com.example.billionseconds.domain.event.EventEligibilityChecker
+import com.example.billionseconds.domain.event.EventHistoryManager
+import com.example.billionseconds.domain.event.EventScreenDataBuilder
+import com.example.billionseconds.domain.event.EventSharePayloadBuilder
+import com.example.billionseconds.domain.event.EventUiMapper
+import com.example.billionseconds.domain.event.model.EventEligibilityStatus
+import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
+import com.example.billionseconds.mvi.event.EventScreenStatus
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.util.AppMetaProvider
@@ -38,8 +47,13 @@ private const val TERMS_URL = "https://example.com/terms"
 class AppStore(
     private val repository: BirthdayRepository,
     private val familyRepository: FamilyProfileRepository,
-    private val settingsRepository: AppSettingsRepository
+    private val settingsRepository: AppSettingsRepository,
+    private val eventHistoryRepository: EventHistoryRepository
 ) {
+    private val eventEligibilityChecker = EventEligibilityChecker(eventHistoryRepository)
+    private val eventHistoryManager = EventHistoryManager(eventHistoryRepository)
+    private val eventDataBuilder = EventScreenDataBuilder(eventEligibilityChecker, eventHistoryManager)
+
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val _state = MutableStateFlow(AppState())
@@ -89,6 +103,8 @@ class AppStore(
                     profile    = buildProfileUiState(now)
                 )
                 startTick(result.milestoneInstant)
+                // Проверка event eligibility при старте приложения
+                checkEventEligibilityAndTrigger(activeProfile, now)
             }
         }
     }
@@ -149,6 +165,24 @@ class AppStore(
             is AppIntent.ApproximateLabelsToggled,
             is AppIntent.Use24HourFormatToggled     -> persistSettings()
             is AppIntent.ConfirmDangerousAction     -> onConfirmDangerousAction()
+            // Debug
+            is AppIntent.DebugOpenEventScreen       -> onDebugOpenEventScreen()
+            // Event Screen
+            is AppIntent.Event.ScreenOpened         -> onEventScreenOpened(intent.profileId, intent.source)
+            is AppIntent.Event.MarkSeenIfNeeded     -> onEventMarkSeen()
+            is AppIntent.Event.MarkCelebrationShownIfNeeded -> onEventMarkCelebrationShown()
+            is AppIntent.Event.CelebrationCompleted -> onEventCelebrationCompleted()
+            is AppIntent.Event.CelebrationSkipped   -> onEventMarkCelebrationShown()
+            is AppIntent.Event.ShareClicked         -> onEventShareClicked()
+            is AppIntent.Event.CreateVideoClicked   -> emitEffect(AppEffect.ShowComingSoon("create_video"))
+            is AppIntent.Event.OpenMilestonesClicked -> emitEffect(AppEffect.NavigateToMilestonesFromEvent)
+            is AppIntent.Event.OpenStatsClicked     -> emitEffect(AppEffect.NavigateToStatsFromEvent)
+            is AppIntent.Event.GoHomeClicked        -> emitEffect(AppEffect.NavigateToHomeFromEvent)
+            is AppIntent.Event.NextMilestoneClicked -> emitEffect(AppEffect.ShowComingSoon("next_milestone"))
+            is AppIntent.Event.RetryClicked         -> onEventRetry()
+            is AppIntent.Event.ProfileChanged       -> onEventProfileChanged(intent.newProfileId)
+            is AppIntent.Event.BackPressed,
+            is AppIntent.Event.DismissClicked       -> Unit // reducer handles navigation
             else -> Unit
         }
     }
@@ -501,6 +535,8 @@ class AppStore(
         }
         emitEffect(AppEffect.ActiveProfileChanged(id))
         startTick(result.milestoneInstant)
+        // Сброс event auto-trigger для нового профиля
+        dispatch(AppIntent.Event.ProfileChanged(id))
     }
 
     // ── Share ─────────────────────────────────────────────────────────────────
@@ -514,6 +550,142 @@ class AppStore(
             "Прогресс: ${s.formattedProgress} #BillionSeconds"
         }
         emitEffect(AppEffect.ShareText(text))
+    }
+
+    // ── Event Screen ──────────────────────────────────────────────────────────
+
+    /**
+     * Debug/test helper: сбрасывает event history активного профиля
+     * и открывает EventScreen, чтобы попасть в first-time режим.
+     *
+     * Вызывается только из debug-кнопки в Profile → Управление данными.
+     */
+    private fun onDebugOpenEventScreen() {
+        val profile = getActiveProfileOrFallback() ?: run {
+            emitEffect(AppEffect.ShowError("Нет активного профиля"))
+            return
+        }
+        // Сброс event history → следующее открытие будет first-time
+        eventHistoryRepository.deleteRecord(profile.id)
+        // Сброс сессионного флага
+        _state.update { it.copy(event = it.event.copy(autoOpenTriggered = false)) }
+        // Открываем экран
+        dispatch(AppIntent.Event.ScreenOpened(profile.id, EventSource.MANUAL))
+    }
+
+    private fun onEventScreenOpened(profileId: String, source: EventSource) {
+        val profile = familyRepository.getProfileById(profileId)
+        if (profile == null) {
+            _state.update {
+                it.copy(event = it.event.copy(
+                    isLoading = false,
+                    screenStatus = EventScreenStatus.ProfileMissing,
+                    errorMessage = "Профиль не найден"
+                ))
+            }
+            return
+        }
+        val now = currentInstant()
+        val domain = eventDataBuilder.build(profile, source, now)
+
+        if (!domain.isReached) {
+            _state.update {
+                it.copy(event = it.event.copy(
+                    isLoading = false,
+                    screenStatus = EventScreenStatus.NotEligible,
+                    errorMessage = "Событие ещё не наступило"
+                ))
+            }
+            return
+        }
+
+        val uiModel = EventUiMapper.toUiModel(domain, now)
+        val status = if (domain.mode == com.example.billionseconds.domain.event.model.EventMode.FIRST_TIME)
+            EventScreenStatus.FirstTime else EventScreenStatus.Repeat
+        val isBackAllowed = domain.mode == com.example.billionseconds.domain.event.model.EventMode.REPEAT
+
+        _state.update {
+            it.copy(event = it.event.copy(
+                isLoading            = false,
+                profileId            = profileId,
+                profileName          = domain.profileName,
+                targetDateTime       = domain.targetDateTime,
+                firstShownAt         = domain.firstShownAt,
+                isApproximateMode    = domain.isApproximateMode,
+                mode                 = domain.mode,
+                source               = source,
+                screenStatus         = status,
+                isBackAllowed        = isBackAllowed,
+                isCelebrationRunning = false,
+                celebrationCompleted = domain.celebrationShown,
+                uiModel              = uiModel,
+                errorMessage         = null
+            ))
+        }
+
+        // Если first-time — сразу фиксируем факт показа и запускаем celebration
+        if (domain.mode == com.example.billionseconds.domain.event.model.EventMode.FIRST_TIME) {
+            eventHistoryManager.markSeen(profileId, now)
+            if (!domain.celebrationShown) {
+                emitEffect(AppEffect.TriggerCelebrationAnimation)
+            } else {
+                // Celebration уже было (после process death) — back разрешён
+                _state.update { it.copy(event = it.event.copy(isBackAllowed = true)) }
+            }
+        }
+    }
+
+    private fun onEventMarkSeen() {
+        val profileId = _state.value.event.profileId.takeIf { it.isNotEmpty() } ?: return
+        eventHistoryManager.markSeen(profileId, currentInstant())
+    }
+
+    private fun onEventMarkCelebrationShown() {
+        val profileId = _state.value.event.profileId.takeIf { it.isNotEmpty() } ?: return
+        eventHistoryManager.markCelebrationShown(profileId, currentInstant())
+    }
+
+    private fun onEventCelebrationCompleted() {
+        onEventMarkCelebrationShown()
+    }
+
+    private fun onEventShareClicked() {
+        val profileId = _state.value.event.profileId.takeIf { it.isNotEmpty() } ?: return
+        val targetDateTime = _state.value.event.targetDateTime ?: return
+        val profile = familyRepository.getProfileById(profileId) ?: return
+        val payload = EventSharePayloadBuilder.build(profile, targetDateTime)
+        emitEffect(AppEffect.ShareEventPayload(payload))
+        // Фиксируем факт показа share prompt
+        eventHistoryManager.markSharePromptShown(profileId, currentInstant())
+    }
+
+    private fun onEventRetry() {
+        val profileId = _state.value.event.profileId.takeIf { it.isNotEmpty() } ?: return
+        val source = _state.value.event.source
+        onEventScreenOpened(profileId, source)
+    }
+
+    private fun onEventProfileChanged(newProfileId: String) {
+        // autoOpenTriggered уже сброшен в reducer
+        val activeProfile = familyRepository.getProfileById(newProfileId)
+            ?: getActiveProfileOrFallback() ?: return
+        val now = currentInstant()
+        checkEventEligibilityAndTrigger(activeProfile, now)
+    }
+
+    /**
+     * Проверяет eligibility события и автоматически открывает EventScreen.
+     * Вызывается при старте приложения, при тике (только если !autoOpenTriggered),
+     * и при смене active profile.
+     */
+    private fun checkEventEligibilityAndTrigger(profile: FamilyProfile, now: Instant) {
+        val result = eventEligibilityChecker.check(profile, now)
+        if (result.status == EventEligibilityStatus.EligibleFirstTime) {
+            if (!_state.value.event.autoOpenTriggered) {
+                _state.update { it.copy(event = it.event.copy(autoOpenTriggered = true)) }
+                emitEffect(AppEffect.NavigateToEventScreen(profile.id, EventSource.AUTO))
+            }
+        }
     }
 
     // ── Tick ─────────────────────────────────────────────────────────────────
@@ -545,6 +717,10 @@ class AppStore(
                             newMilestones.copy(celebrationAvailableId = null)
                         else newMilestones
                     )
+                }
+                // Проверка event eligibility в тике — только если auto-trigger ещё не срабатывал
+                if (!_state.value.event.autoOpenTriggered) {
+                    checkEventEligibilityAndTrigger(activeProfile, now)
                 }
             }
         }

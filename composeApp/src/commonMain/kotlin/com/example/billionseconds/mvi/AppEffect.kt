@@ -1,5 +1,8 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.domain.event.EventSharePayload
+import com.example.billionseconds.domain.event.model.EventSource
+
 sealed class AppEffect {
     data object ExitApp                                              : AppEffect()
     data class  ShareText(val text: String)                         : AppEffect()
@@ -13,4 +16,15 @@ sealed class AppEffect {
     data class  LaunchExternalUrl(val url: String)                        : AppEffect()
     data class  ShowProfileError(val message: String)                     : AppEffect()
     data object OnboardingReset                                           : AppEffect()
+
+    // Event Screen
+    data class  NavigateToEventScreen(val profileId: String, val source: EventSource) : AppEffect()
+    data object NavigateToShareFromEvent     : AppEffect()
+    data object NavigateToMilestonesFromEvent: AppEffect()
+    data object NavigateToStatsFromEvent     : AppEffect()
+    data object NavigateToHomeFromEvent      : AppEffect()
+    data object CloseEventScreen             : AppEffect()
+    data object TriggerCelebrationAnimation  : AppEffect()
+    data class  ShareEventPayload(val payload: EventSharePayload) : AppEffect()
+    data class  ShowEventError(val message: String) : AppEffect()
 }
