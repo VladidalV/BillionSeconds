@@ -29,7 +29,9 @@
       "Bash(./gradlew :composeApp:compileKotlinWasmJs :composeApp:compileKotlinJs --no-configuration-cache)",
       "Bash(./gradlew compileKotlinAndroid)",
       "Bash(./gradlew :composeApp:testDebugUnitTest)",
-      "Bash(./gradlew :composeApp:compileKotlinIosArm64)"
+      "Bash(./gradlew :composeApp:compileKotlinIosArm64)",
+      "Bash(head -624 \"/Users/vladimirkhafizov/.claude/plans/ethereal-dancing-feigenbaum.md\")",
+      "Read(//tmp/**)"
     ]
   }
 }

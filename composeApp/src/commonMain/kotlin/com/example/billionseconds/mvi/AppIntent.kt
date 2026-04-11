@@ -3,6 +3,8 @@ package com.example.billionseconds.mvi
 import com.example.billionseconds.data.model.RelationType
 import com.example.billionseconds.navigation.MainTab
 
+
+
 sealed class AppIntent {
 
     // Onboarding Screen 1
@@ -75,4 +77,35 @@ sealed class AppIntent {
 
     // Navigation
     data object BackClicked : AppIntent()
+
+    // Profile screen — lifecycle
+    data object ProfileScreenStarted : AppIntent()
+    data object ProfileScreenResumed : AppIntent()
+
+    // Profile — sub-screen navigation
+    data class  ProfileSubScreenSelected(val sub: ProfileSubScreen) : AppIntent()
+    data object ProfileSubScreenDismissed : AppIntent()
+
+    // Profile — entry points
+    data object ActiveProfileSummaryClicked : AppIntent()
+    data object PremiumClicked              : AppIntent()
+    data object TimeCapsuleClicked          : AppIntent()
+    data object HelpClicked                 : AppIntent()
+
+    // Profile — settings toggles
+    data object NotificationsToggled         : AppIntent()
+    data object MilestoneRemindersToggled    : AppIntent()
+    data object FamilyRemindersToggled       : AppIntent()
+    data object ReengagementToggled          : AppIntent()
+    data object ApproximateLabelsToggled     : AppIntent()
+    data object Use24HourFormatToggled       : AppIntent()
+
+    // Profile — legal
+    data class LegalLinkClicked(val type: LegalLinkType) : AppIntent()
+
+    // Profile — dangerous actions
+    data object ResetOnboardingClicked  : AppIntent()
+    data object ClearAllDataClicked     : AppIntent()
+    data object ConfirmDangerousAction  : AppIntent()
+    data object DismissConfirmDialog    : AppIntent()
 }

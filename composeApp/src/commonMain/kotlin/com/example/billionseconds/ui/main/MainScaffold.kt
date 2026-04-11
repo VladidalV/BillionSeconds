@@ -43,7 +43,7 @@ fun MainScaffold(
                 MainTab.Stats      -> LifeStatsScreen(uiState = state.lifeStats, onIntent = onIntent)
                 MainTab.Family     -> FamilyScreen(uiState = state.family, onIntent = onIntent)
                 MainTab.Milestones -> MilestonesScreen(uiState = state.milestones, onIntent = onIntent)
-                MainTab.Profile    -> ProfileScreen()
+                MainTab.Profile    -> ProfileScreen(uiState = state.profile, onIntent = onIntent)
             }
         }
     }

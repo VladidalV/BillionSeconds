@@ -36,5 +36,8 @@ data class AppState(
     val milestones: MilestonesUiState = MilestonesUiState(),
 
     // Family screen
-    val family: FamilyUiState = FamilyUiState()
+    val family: FamilyUiState = FamilyUiState(),
+
+    // Profile screen
+    val profile: ProfileUiState = ProfileUiState()
 )

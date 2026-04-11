@@ -1,5 +1,6 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.data.AppSettingsRepository
 import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.FamilyProfileRepository
 import com.example.billionseconds.data.model.BirthdayData
@@ -22,6 +23,7 @@ import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
+import com.example.billionseconds.util.AppMetaProvider
 import com.example.billionseconds.util.currentInstant
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -30,9 +32,13 @@ import kotlinx.datetime.Instant
 private const val MAX_PROFILES = 5
 private const val PRIMARY_PROFILE_ID = "self_primary"
 
+private const val PRIVACY_POLICY_URL = "https://example.com/privacy"
+private const val TERMS_URL = "https://example.com/terms"
+
 class AppStore(
     private val repository: BirthdayRepository,
-    private val familyRepository: FamilyProfileRepository
+    private val familyRepository: FamilyProfileRepository,
+    private val settingsRepository: AppSettingsRepository
 ) {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -79,7 +85,8 @@ class AppStore(
                     countdown  = buildCountdownUiState(result, unknownTime, now),
                     lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
                     milestones = buildMilestonesUiState(birthData, unknownTime, now),
-                    family     = buildFamilyUiState(now)
+                    family     = buildFamilyUiState(now),
+                    profile    = buildProfileUiState(now)
                 )
                 startTick(result.milestoneInstant)
             }
@@ -114,6 +121,21 @@ class AppStore(
             is AppIntent.BackClicked -> {
                 if (_state.value.screen is AppScreen.Main) emitEffect(AppEffect.ExitApp)
             }
+            // Profile
+            is AppIntent.ProfileScreenStarted       -> onProfileResumed()
+            is AppIntent.ProfileScreenResumed       -> onProfileResumed()
+            is AppIntent.ActiveProfileSummaryClicked -> emitEffect(AppEffect.NavigateToFamily)
+            is AppIntent.PremiumClicked             -> emitEffect(AppEffect.ShowComingSoon("premium"))
+            is AppIntent.TimeCapsuleClicked         -> emitEffect(AppEffect.ShowComingSoon("time_capsule"))
+            is AppIntent.HelpClicked                -> emitEffect(AppEffect.ShowComingSoon("help"))
+            is AppIntent.LegalLinkClicked           -> onLegalLinkClicked(intent.type)
+            is AppIntent.NotificationsToggled,
+            is AppIntent.MilestoneRemindersToggled,
+            is AppIntent.FamilyRemindersToggled,
+            is AppIntent.ReengagementToggled,
+            is AppIntent.ApproximateLabelsToggled,
+            is AppIntent.Use24HourFormatToggled     -> persistSettings()
+            is AppIntent.ConfirmDangerousAction     -> onConfirmDangerousAction()
             else -> Unit
         }
     }
@@ -173,7 +195,8 @@ class AppStore(
                 countdown    = buildCountdownUiState(result, s.unknownTime, now),
                 lifeStats    = buildLifeStatsUiState(data, result, s.unknownTime, now),
                 milestones   = buildMilestonesUiState(data, s.unknownTime, now),
-                family       = buildFamilyUiState(now)
+                family       = buildFamilyUiState(now),
+                profile      = buildProfileUiState(now)
             )
         }
         startTick(milestone)
@@ -748,6 +771,71 @@ class AppStore(
             canAddMore             = profiles.size < MAX_PROFILES,
             maxProfilesReached     = profiles.size >= MAX_PROFILES,
             error                  = null
+        )
+    }
+
+    // ── Profile screen ────────────────────────────────────────────────────────
+
+    private fun onProfileResumed() {
+        val now = currentInstant()
+        _state.update { it.copy(profile = buildProfileUiState(now)) }
+    }
+
+    private fun persistSettings() {
+        // Reducer уже обновил state; читаем новые settings и сохраняем
+        settingsRepository.saveSettings(_state.value.profile.settings)
+    }
+
+    private fun onLegalLinkClicked(type: LegalLinkType) {
+        val url = when (type) {
+            LegalLinkType.PrivacyPolicy -> PRIVACY_POLICY_URL
+            LegalLinkType.TermsOfUse   -> TERMS_URL
+        }
+        emitEffect(AppEffect.LaunchExternalUrl(url))
+    }
+
+    private fun onConfirmDangerousAction() {
+        if (_state.value.profile.isActionInProgress) return  // guard double-tap
+        val dialog = _state.value.profile.confirmDialog ?: return
+        scope.launch {
+            when (dialog) {
+                ProfileConfirmDialog.ResetOnboarding,
+                ProfileConfirmDialog.ClearAllData -> {
+                    tickJob?.cancel()
+                    repository.clearBirthday()
+                    repository.setOnboardingCompleted(false)
+                    familyRepository.clearAll()
+                    settingsRepository.clearAll()
+                    _state.value = AppState()
+                    emitEffect(AppEffect.OnboardingReset)
+                }
+            }
+        }
+    }
+
+    private fun buildProfileUiState(now: Instant): ProfileUiState {
+        val activeProfile = getActiveProfileOrFallback()
+        val settings = settingsRepository.getSettings()
+        val summary = activeProfile?.let {
+            val calc = FamilyProfileCalculator.compute(it, now)
+            ActiveProfileSummary(
+                name               = it.name,
+                relationLabel      = FamilyProfileFormatter.formatRelation(it.relationType, it.customRelationName),
+                relationEmoji      = it.relationType.emoji,
+                billionDateText    = FamilyProfileFormatter.formatBillionDate(calc.milestoneInstant, it.unknownBirthTime),
+                hasApproximateTime = it.unknownBirthTime,
+                isPrimary          = it.isPrimary
+            )
+        }
+        return ProfileUiState(
+            isLoading            = false,
+            activeProfileSummary = summary,
+            settings             = settings,
+            appVersion           = AppMetaProvider.getVersion(),
+            subScreen            = _state.value.profile.subScreen,
+            confirmDialog        = _state.value.profile.confirmDialog,
+            isActionInProgress   = _state.value.profile.isActionInProgress,
+            error                = null
         )
     }
 

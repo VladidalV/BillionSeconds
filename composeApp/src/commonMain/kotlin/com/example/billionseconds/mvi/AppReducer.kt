@@ -3,6 +3,7 @@ package com.example.billionseconds.mvi
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.data.model.RelationType
+import com.example.billionseconds.data.model.AppSettings
 
 object AppReducer {
 
@@ -62,14 +63,19 @@ object AppReducer {
             if (currentTab == intent.tab) state
             else state.copy(
                 screen = AppScreen.Main(tab = intent.tab),
-                // Прерывание формы при смене вкладки
+                // Прерывание формы при смене вкладки из Family
                 family = if (currentTab == MainTab.Family) state.family
                 else state.family.copy(
                     formDraft = null,
                     subScreen = FamilySubScreen.List,
                     isDeleteConfirmationVisible = false,
                     pendingDeleteId = null
-                )
+                ),
+                // Сброс Profile sub-screen при смене вкладки из Profile
+                profile = if (currentTab == MainTab.Profile) state.profile.copy(
+                    subScreen = ProfileSubScreen.Root,
+                    confirmDialog = null
+                ) else state.profile
             )
         }
 
@@ -189,6 +195,87 @@ object AppReducer {
 
         // Navigation
         is AppIntent.BackClicked -> state // ExitApp effect emitted in AppStore
+
+        // Profile screen — lifecycle
+        is AppIntent.ProfileScreenStarted -> state
+        is AppIntent.ProfileScreenResumed -> state
+
+        // Profile — sub-screen navigation
+        is AppIntent.ProfileSubScreenSelected ->
+            state.copy(profile = state.profile.copy(subScreen = intent.sub, confirmDialog = null))
+
+        is AppIntent.ProfileSubScreenDismissed ->
+            state.copy(profile = state.profile.copy(subScreen = ProfileSubScreen.Root))
+
+        // Profile — entry points (side effects in Store)
+        is AppIntent.ActiveProfileSummaryClicked -> state
+        is AppIntent.PremiumClicked              -> state
+        is AppIntent.TimeCapsuleClicked          -> state
+        is AppIntent.HelpClicked                 -> state
+        is AppIntent.LegalLinkClicked            -> state
+
+        // Profile — settings toggles
+        is AppIntent.NotificationsToggled ->
+            state.copy(profile = state.profile.copy(
+                settings = state.profile.settings.copy(
+                    notificationsEnabled = !state.profile.settings.notificationsEnabled
+                )
+            ))
+
+        is AppIntent.MilestoneRemindersToggled ->
+            state.copy(profile = state.profile.copy(
+                settings = state.profile.settings.copy(
+                    milestoneRemindersEnabled = !state.profile.settings.milestoneRemindersEnabled
+                )
+            ))
+
+        is AppIntent.FamilyRemindersToggled ->
+            state.copy(profile = state.profile.copy(
+                settings = state.profile.settings.copy(
+                    familyRemindersEnabled = !state.profile.settings.familyRemindersEnabled
+                )
+            ))
+
+        is AppIntent.ReengagementToggled ->
+            state.copy(profile = state.profile.copy(
+                settings = state.profile.settings.copy(
+                    reengagementEnabled = !state.profile.settings.reengagementEnabled
+                )
+            ))
+
+        is AppIntent.ApproximateLabelsToggled ->
+            state.copy(profile = state.profile.copy(
+                settings = state.profile.settings.copy(
+                    approximateLabelsEnabled = !state.profile.settings.approximateLabelsEnabled
+                )
+            ))
+
+        is AppIntent.Use24HourFormatToggled ->
+            state.copy(profile = state.profile.copy(
+                settings = state.profile.settings.copy(
+                    use24HourFormat = !state.profile.settings.use24HourFormat
+                )
+            ))
+
+        // Profile — dangerous actions
+        is AppIntent.ResetOnboardingClicked ->
+            state.copy(profile = state.profile.copy(
+                confirmDialog = ProfileConfirmDialog.ResetOnboarding
+            ))
+
+        is AppIntent.ClearAllDataClicked ->
+            state.copy(profile = state.profile.copy(
+                confirmDialog = ProfileConfirmDialog.ClearAllData
+            ))
+
+        is AppIntent.ConfirmDangerousAction ->
+            state.copy(profile = state.profile.copy(isActionInProgress = true))
+
+        is AppIntent.DismissConfirmDialog ->
+            state.copy(profile = state.profile.copy(
+                confirmDialog = null,
+                isActionInProgress = false
+            ))
     }
 }
 

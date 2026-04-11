@@ -1,38 +1,57 @@
 package com.example.billionseconds.ui.profile
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import com.example.billionseconds.mvi.AppIntent
+import com.example.billionseconds.mvi.ProfileSubScreen
+import com.example.billionseconds.mvi.ProfileUiState
 
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "\uD83D\uDC64", style = MaterialTheme.typography.displayMedium)
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "Личный кабинет",
-                style = MaterialTheme.typography.titleLarge
+fun ProfileScreen(
+    uiState: ProfileUiState,
+    onIntent: (AppIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LaunchedEffect(Unit) {
+        onIntent(AppIntent.ProfileScreenStarted)
+    }
+
+    when (uiState.subScreen) {
+        is ProfileSubScreen.Root ->
+            ProfileRootContent(
+                uiState = uiState,
+                onIntent = onIntent,
+                modifier = modifier.fillMaxSize()
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Здесь будет ваш профиль,\nнастройки и персональная\nстатистика.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+
+        is ProfileSubScreen.NotificationSettings ->
+            NotificationSettingsContent(
+                uiState = uiState,
+                onIntent = onIntent,
+                modifier = modifier.fillMaxSize()
             )
-        }
+
+        is ProfileSubScreen.AppSettings ->
+            AppSettingsContent(
+                uiState = uiState,
+                onIntent = onIntent,
+                modifier = modifier.fillMaxSize()
+            )
+
+        is ProfileSubScreen.DataManagement ->
+            DataManagementContent(
+                uiState = uiState,
+                onIntent = onIntent,
+                modifier = modifier.fillMaxSize()
+            )
+
+        is ProfileSubScreen.AboutApp ->
+            AboutAppContent(
+                uiState = uiState,
+                onIntent = onIntent,
+                modifier = modifier.fillMaxSize()
+            )
     }
 }
