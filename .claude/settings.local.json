@@ -36,7 +36,8 @@
       "Bash(xargs -I {} find {} -type d -mindepth 1 -maxdepth 1)",
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid --rerun-tasks)",
       "Bash(./gradlew :composeApp:compileKotlinJs)",
-      "mcp__plugin_figma_figma__get_design_context"
+      "mcp__plugin_figma_figma__get_design_context",
+      "mcp__plugin_figma_figma__get_metadata"
     ]
   }
 }
