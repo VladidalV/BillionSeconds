@@ -119,7 +119,20 @@ class AppStore(
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
             is AppIntent.AddFamilyClicked           -> emitEffect(AppEffect.ShowComingSoon("add_family"))
             is AppIntent.BackClicked -> {
-                if (_state.value.screen is AppScreen.Main) emitEffect(AppEffect.ExitApp)
+                if (_state.value.screen is AppScreen.Main) {
+                    val profileSubScreen = _state.value.profile.subScreen
+                    if (profileSubScreen !is ProfileSubScreen.Root) {
+                        // Есть открытый sub-screen Profile — возврат на Root
+                        _state.update {
+                            it.copy(profile = it.profile.copy(
+                                subScreen = ProfileSubScreen.Root,
+                                confirmDialog = null
+                            ))
+                        }
+                    } else {
+                        emitEffect(AppEffect.ExitApp)
+                    }
+                }
             }
             // Profile
             is AppIntent.ProfileScreenStarted       -> onProfileResumed()

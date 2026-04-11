@@ -18,6 +18,11 @@ fun ProfileScreen(
         onIntent(AppIntent.ProfileScreenStarted)
     }
 
+    // Перехватываем системную кнопку Back на Android, когда открыт sub-screen
+    PlatformBackHandler(enabled = uiState.subScreen !is ProfileSubScreen.Root) {
+        onIntent(AppIntent.ProfileSubScreenDismissed)
+    }
+
     when (uiState.subScreen) {
         is ProfileSubScreen.Root ->
             ProfileRootContent(

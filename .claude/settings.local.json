@@ -31,7 +31,8 @@
       "Bash(./gradlew :composeApp:testDebugUnitTest)",
       "Bash(./gradlew :composeApp:compileKotlinIosArm64)",
       "Bash(head -624 \"/Users/vladimirkhafizov/.claude/plans/ethereal-dancing-feigenbaum.md\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep -v \"^commonMain$\\\\|^androidMain$\\\\|^iosMain$\")"
     ]
   }
 }
