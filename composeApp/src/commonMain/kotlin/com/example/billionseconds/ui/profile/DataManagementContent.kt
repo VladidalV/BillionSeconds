@@ -70,6 +70,14 @@ fun DataManagementContent(
 
         Spacer(Modifier.height(8.dp))
 
+        DebugActionRow(
+            title = "🧪 Открыть Event Screen",
+            subtitle = "Сброс истории + открытие экрана (требует дату рождения до 1993 г.)",
+            onClick = { onIntent(AppIntent.DebugOpenEventScreen) }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
         DangerousActionRow(
             title = "Сбросить онбординг",
             subtitle = "Удалить все данные и вернуться к началу",
@@ -94,6 +102,39 @@ fun DataManagementContent(
         }
 
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun DebugActionRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text  = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text  = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

@@ -25,7 +25,9 @@ import com.example.billionseconds.domain.event.EventHistoryManager
 import com.example.billionseconds.domain.event.EventScreenDataBuilder
 import com.example.billionseconds.domain.event.EventSharePayloadBuilder
 import com.example.billionseconds.domain.event.EventUiMapper
+import com.example.billionseconds.domain.event.model.EventDomainModel
 import com.example.billionseconds.domain.event.model.EventEligibilityStatus
+import com.example.billionseconds.domain.event.model.EventMode
 import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
@@ -555,22 +557,62 @@ class AppStore(
     // ── Event Screen ──────────────────────────────────────────────────────────
 
     /**
-     * Debug/test helper: сбрасывает event history активного профиля
-     * и открывает EventScreen, чтобы попасть в first-time режим.
+     * Debug/test helper: открывает EventScreen в first-time режиме
+     * для активного профиля, игнорируя реальную дату миллиарда секунд.
      *
-     * Вызывается только из debug-кнопки в Profile → Управление данными.
+     * НЕ трогает event history и дату рождения профиля.
+     * Ничего не пишет в хранилище — только показывает экран.
      */
     private fun onDebugOpenEventScreen() {
         val profile = getActiveProfileOrFallback() ?: run {
             emitEffect(AppEffect.ShowError("Нет активного профиля"))
             return
         }
-        // Сброс event history → следующее открытие будет first-time
-        eventHistoryRepository.deleteRecord(profile.id)
-        // Сброс сессионного флага
-        _state.update { it.copy(event = it.event.copy(autoOpenTriggered = false)) }
-        // Открываем экран
-        dispatch(AppIntent.Event.ScreenOpened(profile.id, EventSource.MANUAL))
+        val now = currentInstant()
+
+        // Строим фейковую доменную модель с реальными данными профиля,
+        // но форсируем isReached = true и mode = FIRST_TIME
+        val fakeDomain = EventDomainModel(
+            profileId         = profile.id,
+            profileName       = profile.name,
+            relationType      = profile.relationType,
+            unknownBirthTime  = profile.unknownBirthTime,
+            targetDateTime    = now,          // "событие наступило прямо сейчас"
+            isReached         = true,
+            wasShown          = false,
+            celebrationShown  = false,
+            sharePromptShown  = false,
+            firstShownAt      = null,
+            mode              = EventMode.FIRST_TIME,
+            eligibilityStatus = EventEligibilityStatus.EligibleFirstTime,
+            source            = EventSource.MANUAL,
+            isApproximateMode = profile.unknownBirthTime
+        )
+
+        val uiModel = EventUiMapper.toUiModel(fakeDomain, now)
+
+        _state.update {
+            it.copy(
+                screen = AppScreen.EventScreen(profile.id, EventSource.MANUAL),
+                event  = it.event.copy(
+                    isLoading            = false,
+                    profileId            = profile.id,
+                    profileName          = profile.name,
+                    targetDateTime       = now,
+                    firstShownAt         = null,
+                    isApproximateMode    = profile.unknownBirthTime,
+                    mode                 = EventMode.FIRST_TIME,
+                    source               = EventSource.MANUAL,
+                    screenStatus         = EventScreenStatus.FirstTime,
+                    isBackAllowed        = false,
+                    isCelebrationRunning = false,
+                    celebrationCompleted = false,
+                    uiModel              = uiModel,
+                    errorMessage         = null
+                )
+            )
+        }
+        emitEffect(AppEffect.TriggerCelebrationAnimation)
     }
 
     private fun onEventScreenOpened(profileId: String, source: EventSource) {
