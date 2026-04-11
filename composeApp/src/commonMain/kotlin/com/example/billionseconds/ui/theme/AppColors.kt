@@ -43,4 +43,5 @@ object AppColors {
     // ── Glow / Decorative ─────────────────────────────────────────────────────
     val glowPurple      = Color(0xFFD0BCFF).copy(alpha = 0.12f)
     val glowBlue        = Color(0xFFADC6FF).copy(alpha = 0.10f)
+    val ringDecoration  = Color(0xFF494454).copy(alpha = 0.10f)  // orbital ring around circular dial
 }

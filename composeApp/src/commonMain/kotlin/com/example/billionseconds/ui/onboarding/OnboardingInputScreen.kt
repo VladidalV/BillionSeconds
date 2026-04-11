@@ -115,42 +115,6 @@ private fun BoxScope.TopBar() {
     }
 }
 
-// ── Step Indicator ────────────────────────────────────────────────────────────
-
-@Composable
-private fun StepIndicator(currentStep: Int, totalSteps: Int) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(totalSteps) { index ->
-            val isActive = index == currentStep
-            val width = if (isActive) 48.dp else 32.dp
-            if (isActive) {
-                Box(
-                    modifier = Modifier
-                        .width(width)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
-                            )
-                        )
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .width(width)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.stepInactive)
-                )
-            }
-        }
-    }
-}
-
 // ── Hero Section ──────────────────────────────────────────────────────────────
 
 @Composable
