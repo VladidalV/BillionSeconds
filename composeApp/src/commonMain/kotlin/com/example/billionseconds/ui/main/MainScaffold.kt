@@ -1,11 +1,10 @@
 package com.example.billionseconds.ui.main
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.AppState
 import com.example.billionseconds.navigation.AppScreen
@@ -24,19 +23,12 @@ fun MainScaffold(
 ) {
     val selectedTab = (state.screen as? AppScreen.Main)?.tab ?: MainTab.Home
 
-    Scaffold(
-        modifier = modifier,
-        bottomBar = {
-            BottomBar(
-                selectedTab = selectedTab,
-                onTabSelected = { tab -> onIntent(AppIntent.TabSelected(tab)) }
-            )
-        }
-    ) { padding ->
+    Box(modifier = modifier.fillMaxSize()) {
+        // Screen content — padded at bottom so nothing hides under the floating nav
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(bottom = 72.dp)
         ) {
             when (selectedTab) {
                 MainTab.Home       -> CountdownScreen(state = state, onIntent = onIntent)
@@ -46,5 +38,15 @@ fun MainScaffold(
                 MainTab.Profile    -> ProfileScreen(uiState = state.profile, onIntent = onIntent)
             }
         }
+
+        // Floating pill nav bar
+        BottomBar(
+            selectedTab = selectedTab,
+            onTabSelected = { tab -> onIntent(AppIntent.TabSelected(tab)) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .navigationBarsPadding()
+        )
     }
 }

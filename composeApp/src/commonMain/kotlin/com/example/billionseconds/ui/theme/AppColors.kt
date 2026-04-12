@@ -50,4 +50,8 @@ object AppColors {
     val glowPurple      = Color(0xFFD0BCFF).copy(alpha = 0.12f)
     val glowBlue        = Color(0xFFADC6FF).copy(alpha = 0.10f)
     val ringDecoration  = Color(0xFF494454).copy(alpha = 0.10f)  // orbital ring around circular dial
+
+    // ── Navigation ────────────────────────────────────────────────────────────
+    val navBarBackground = Color(0xFF2E3447).copy(alpha = 0.6f)  // floating pill nav bar
+    val navBarBorder     = Color.White.copy(alpha = 0.06f)        // subtle pill border
 }
