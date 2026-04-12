@@ -1,16 +1,31 @@
 package com.example.billionseconds.ui.milestones
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.MilestonesError
 import com.example.billionseconds.mvi.MilestonesUiState
+import com.example.billionseconds.ui.theme.AppColors
 
 @Composable
 fun MilestonesScreen(
@@ -22,142 +37,275 @@ fun MilestonesScreen(
         onIntent(AppIntent.MilestonesScreenStarted)
     }
 
-    when {
-        uiState.isLoading -> {
-            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.backgroundScreen)
+    ) {
+        when {
+            uiState.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppColors.purpleAccent)
+                }
             }
-        }
 
-        uiState.error == MilestonesError.NoBirthData -> {
-            NoBirthDataPlaceholder(modifier)
-        }
-
-        uiState.milestones.isEmpty() -> {
-            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Вехи не настроены",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            uiState.error == MilestonesError.NoBirthData -> {
+                NoBirthDataPlaceholder()
             }
-        }
 
-        else -> {
-            MilestonesContent(
-                uiState  = uiState,
-                onIntent = onIntent,
-                modifier = modifier
-            )
+            uiState.milestones.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Вехи не настроены",
+                        color = AppColors.textSubtle,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+
+            else -> {
+                MilestonesContent(uiState = uiState, onIntent = onIntent)
+            }
         }
     }
 
-    // Celebration banner
+    // Celebration dialog — renders above everything
     uiState.celebrationAvailableId?.let { id ->
         val item = uiState.milestones.firstOrNull { it.id == id }
         if (item != null) {
             CelebrationBanner(
-                title     = item.title,
+                title = item.title,
                 onDismiss = { onIntent(AppIntent.MilestoneCelebrationDismissed) },
-                onShare   = { onIntent(AppIntent.MilestoneShareClicked(id)) }
+                onShare = { onIntent(AppIntent.MilestoneShareClicked(id)) }
             )
         }
     }
 }
+
+// ── Main Content ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun MilestonesContent(
     uiState: MilestonesUiState,
-    onIntent: (AppIntent) -> Unit,
-    modifier: Modifier = Modifier
+    onIntent: (AppIntent) -> Unit
 ) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(vertical = 24.dp)
-    ) {
-        // Approximate disclaimer
-        if (uiState.isApproximateMode) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Ambient glows
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(AppColors.glowPurple, Color.Transparent),
+                    center = Offset(size.width * 0.75f, 200.dp.toPx()),
+                    radius = 220.dp.toPx()
+                ),
+                radius = 220.dp.toPx(),
+                center = Offset(size.width * 0.75f, 200.dp.toPx())
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(AppColors.glowBlue, Color.Transparent),
+                    center = Offset(size.width * 0.2f, size.height - 200.dp.toPx()),
+                    radius = 190.dp.toPx()
+                ),
+                radius = 190.dp.toPx(),
+                center = Offset(size.width * 0.2f, size.height - 200.dp.toPx())
+            )
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = 96.dp,
+                bottom = 48.dp,
+                start = 20.dp,
+                end = 20.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Section header
             item {
-                ApproximateDisclaimer()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(bottom = 6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(14.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(AppColors.purpleAccent.copy(alpha = 0.6f))
+                    )
+                    Text(
+                        text = "КОСМИЧЕСКИЕ ВЕХИ",
+                        color = AppColors.textLabel,
+                        fontSize = 11.sp,
+                        letterSpacing = 2.4.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+            }
+
+            // Approximate disclaimer
+            if (uiState.isApproximateMode) {
+                item {
+                    ApproximateDisclaimer()
+                }
+            }
+
+            items(uiState.milestones, key = { it.id }) { item ->
+                MilestoneCard(
+                    item = item,
+                    isHighlighted = item.id == uiState.highlightedId,
+                    onShareClick = { onIntent(AppIntent.MilestoneShareClicked(item.id)) }
+                )
             }
         }
 
-        items(uiState.milestones, key = { it.id }) { item ->
-            MilestoneCard(
-                item          = item,
-                isHighlighted = item.id == uiState.highlightedId,
-                onShareClick  = { onIntent(AppIntent.MilestoneShareClicked(item.id)) }
+        // Frosted top bar
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(AppColors.headerBackground)
+                .padding(horizontal = 32.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "✦",
+                color = AppColors.purpleAccent,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Capsules",
+                color = AppColors.purpleAccent,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.36).sp
             )
         }
     }
 }
 
+// ── Approximate Disclaimer ────────────────────────────────────────────────────
+
 @Composable
-private fun ApproximateDisclaimer(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small
+private fun ApproximateDisclaimer() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(AppColors.dangerBackground)
+            .border(1.dp, AppColors.textDanger.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
     ) {
+        Text(text = "◎", color = AppColors.textDanger, fontSize = 13.sp)
         Text(
             text = "Время рождения не указано. Все даты приблизительны (±12 часов).",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            color = AppColors.textDanger,
+            fontSize = 12.sp,
+            lineHeight = 18.sp
         )
     }
 }
+
+// ── Celebration Banner ────────────────────────────────────────────────────────
 
 @Composable
 private fun CelebrationBanner(
     title: String,
     onDismiss: () -> Unit,
-    onShare: () -> Unit,
-    modifier: Modifier = Modifier
+    onShare: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = AppColors.cardDark,
+        titleContentColor = AppColors.textHeading,
+        textContentColor = AppColors.textBody,
         title = {
-            Text(text = "\uD83C\uDF89 Поздравляем!")
+            Text(
+                text = "\uD83C\uDF89 Поздравляем!",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
-            Text(text = "Вы достигли вехи\n«$title»!")
+            Text(
+                text = "Вы достигли вехи\n«$title»!",
+                fontSize = 14.sp,
+                lineHeight = 21.sp
+            )
         },
         confirmButton = {
-            TextButton(onClick = {
-                onShare()
-                onDismiss()
-            }) {
-                Text("Поделиться")
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                        )
+                    )
+                    .clickable {
+                        onShare()
+                        onDismiss()
+                    }
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "Поделиться",
+                    color = AppColors.buttonText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Закрыть")
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable(onClick = onDismiss)
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "Закрыть",
+                    color = AppColors.textLabel,
+                    fontSize = 14.sp
+                )
             }
         }
     )
 }
 
+// ── No Birth Data ─────────────────────────────────────────────────────────────
+
 @Composable
-private fun NoBirthDataPlaceholder(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun NoBirthDataPlaceholder() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(32.dp)
         ) {
-            Text(text = "\uD83C\uDFC6", style = MaterialTheme.typography.displayMedium)
+            Text(text = "◈", color = AppColors.purpleAccent, fontSize = 48.sp)
+            Spacer(Modifier.height(4.dp))
             Text(
-                text = "Нет данных о дате рождения",
-                style = MaterialTheme.typography.titleMedium
+                text = "Нет данных",
+                color = AppColors.textHeading,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.5).sp
             )
             Text(
-                text = "Пройдите онбординг, чтобы увидеть достижения.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Пройдите онбординг, чтобы\nувидеть достижения.",
+                color = AppColors.textBody,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
             )
         }
     }

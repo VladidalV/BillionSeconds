@@ -1,13 +1,22 @@
 package com.example.billionseconds.ui.milestones
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.billionseconds.domain.MilestoneStatus
 import com.example.billionseconds.mvi.MilestoneUiItem
+import com.example.billionseconds.ui.theme.AppColors
 
 @Composable
 fun MilestoneCard(
@@ -16,75 +25,167 @@ fun MilestoneCard(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val containerColor = when {
-        isHighlighted -> MaterialTheme.colorScheme.primaryContainer
-        item.status is MilestoneStatus.Reached -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
+    val isNext = item.status is MilestoneStatus.Next
+    val isReached = item.status is MilestoneStatus.Reached
+    val isActive = isHighlighted || isNext
+
+    val borderColor = when {
+        isActive   -> AppColors.purpleAccent.copy(alpha = 0.3f)
+        isReached  -> AppColors.blueAccent.copy(alpha = 0.2f)
+        else       -> AppColors.cardBorder
     }
-    val contentColor = when {
-        isHighlighted -> MaterialTheme.colorScheme.onPrimaryContainer
-        item.status is MilestoneStatus.Reached -> MaterialTheme.colorScheme.onSecondaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    val cardBackground = when {
+        isReached -> AppColors.cardMid
+        else      -> AppColors.cardDark
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(cardBackground)
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // ── Header row ───────────────────────────────────────────────────
+        // Left accent bar for Next / Highlighted
+        if (isActive) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .align(Alignment.CenterStart)
+                    .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                        )
+                    )
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = if (isActive) 18.dp else 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)
+        ) {
+            // ── Header row ────────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.title,
-                        style = if (item.isPrimary) MaterialTheme.typography.titleMedium
-                        else MaterialTheme.typography.bodyLarge,
-                        color = contentColor
-                    )
+                    // Icon + title
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val icon = when {
+                            item.isPrimary -> "◈"
+                            isReached      -> "◎"
+                            isNext         -> "◉"
+                            else           -> "○"
+                        }
+                        val iconColor = when {
+                            isActive  -> AppColors.purpleAccent
+                            isReached -> AppColors.blueAccent
+                            else      -> AppColors.textSubtle
+                        }
+                        Text(
+                            text = icon,
+                            color = iconColor,
+                            fontSize = if (item.isPrimary) 18.sp else 14.sp
+                        )
+                        Text(
+                            text = item.title,
+                            color = when {
+                                isActive  -> AppColors.textHeading
+                                isReached -> AppColors.textBody
+                                else      -> AppColors.textBody.copy(alpha = 0.6f)
+                            },
+                            fontSize = if (item.isPrimary || isActive) 16.sp else 14.sp,
+                            fontWeight = if (item.isPrimary || isActive) FontWeight.SemiBold else FontWeight.Normal,
+                            letterSpacing = (-0.3).sp
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
                     Text(
                         text = item.targetDateText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.7f)
+                        color = when {
+                            isActive  -> AppColors.purpleAccent.copy(alpha = 0.8f)
+                            isReached -> AppColors.blueAccent.copy(alpha = 0.7f)
+                            else      -> AppColors.textLabel
+                        },
+                        fontSize = 12.sp
                     )
                 }
-                Spacer(Modifier.width(8.dp))
+
+                Spacer(Modifier.width(10.dp))
+
+                // Status badge
                 StatusBadge(label = item.statusLabel, status = item.status)
             }
 
-            // ── Progress (только для Next) ────────────────────────────────
-            if (item.status is MilestoneStatus.Next && item.progressText.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                LinearProgressIndicator(
-                    progress = { (item.progressText.trimEnd('%').toFloatOrNull() ?: 0f) / 100f },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                )
-                Spacer(Modifier.height(4.dp))
+            // ── Progress bar (Next only) ───────────────────────────────────────
+            if (isNext && item.progressText.isNotEmpty()) {
+                val progress = item.progressText.trimEnd('%').toFloatOrNull()?.div(100f) ?: 0f
+
+                Spacer(Modifier.height(14.dp))
+
+                // Track + fill
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(AppColors.stepInactive)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress.coerceIn(0f, 1f))
+                            .fillMaxHeight()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                                )
+                            )
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = item.remainingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.8f)
+                        color = AppColors.textSubtle,
+                        fontSize = 11.sp
                     )
                     Text(
                         text = item.progressText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AppColors.purpleAccent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // ── Reached date + share ──────────────────────────────────────
-            if (item.status is MilestoneStatus.Reached) {
-                Spacer(Modifier.height(8.dp))
+            // ── Reached: date + share ─────────────────────────────────────────
+            if (isReached && item.reachedDateText.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(AppColors.divider)
+                )
+
+                Spacer(Modifier.height(10.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -92,52 +193,60 @@ fun MilestoneCard(
                 ) {
                     Text(
                         text = item.reachedDateText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.8f)
+                        color = AppColors.textSubtle,
+                        fontSize = 12.sp
                     )
                     if (item.isShareable) {
-                        TextButton(
-                            onClick = onShareClick,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = "Поделиться",
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                        Text(
+                            text = "Поделиться →",
+                            color = AppColors.purpleAccent.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable(onClick = onShareClick)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }
 
-            // ── Approximate disclaimer ────────────────────────────────────
+            // ── Approximate disclaimer ────────────────────────────────────────
             if (item.hasApproximateDisclaimer) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Дата приблизительная — время рождения не указано",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor.copy(alpha = 0.6f)
+                    text = "~ дата приблизительная — время рождения не указано",
+                    color = AppColors.textSubtle,
+                    fontSize = 11.sp
                 )
             }
         }
     }
 }
 
+// ── Status Badge ──────────────────────────────────────────────────────────────
+
 @Composable
 private fun StatusBadge(label: String, status: MilestoneStatus) {
-    val badgeColor = when (status) {
-        is MilestoneStatus.Reached  -> MaterialTheme.colorScheme.tertiary
-        is MilestoneStatus.Next     -> MaterialTheme.colorScheme.primary
-        is MilestoneStatus.Upcoming -> MaterialTheme.colorScheme.outline
+    val (badgeColor, bgColor) = when (status) {
+        is MilestoneStatus.Reached  -> AppColors.blueAccent  to AppColors.blueAccent.copy(alpha = 0.12f)
+        is MilestoneStatus.Next     -> AppColors.purpleAccent to AppColors.purpleAccent.copy(alpha = 0.12f)
+        is MilestoneStatus.Upcoming -> AppColors.textLabel    to AppColors.cardBorder
     }
-    Surface(
-        color = badgeColor.copy(alpha = 0.15f),
-        shape = MaterialTheme.shapes.small
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bgColor)
+            .border(1.dp, badgeColor.copy(alpha = 0.2f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
             color = badgeColor,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.5.sp
         )
     }
 }
