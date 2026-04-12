@@ -6,9 +6,10 @@ object AppColors {
 
     // ── Backgrounds ───────────────────────────────────────────────────────────
     val backgroundDark   = Color(0xFF070D1F)
-    val backgroundScreen = Color(0xFF0C1324)   // second/third onboarding screens
+    val backgroundScreen = Color(0xFF0C1324)   // second/third onboarding + profile screens
     val cardDark         = Color(0xFF151B2D)
     val cardMid          = Color(0xFF23293C)
+    val cardDeep         = Color(0xFF191F31)   // premium card gradient endpoint
     val overlayCard      = Color(0xFF2E3447).copy(alpha = 0.4f)
     val stepInactive     = Color(0xFF2E3447)   // inactive step-indicator pill
     val headerBackground = Color(0xFF0C1324).copy(alpha = 0.8f)
@@ -34,11 +35,16 @@ object AppColors {
     val buttonGradientStart = Color(0xFFD0BCFF)
     val buttonGradientEnd   = Color(0xFFA078FF)
     val buttonText          = Color(0xFF3C0091)
+    val premiumButtonText   = Color(0xFF23005C)  // premium card "Manage Subscription"
 
     // ── Avatar placeholders ───────────────────────────────────────────────────
     val avatarDark          = Color(0xFF191F31)
     val avatarPurple        = Color(0xFFD0BCFF).copy(alpha = 0.2f)
     val avatarBlue          = Color(0xFFADC6FF).copy(alpha = 0.2f)
+
+    // ── Danger ────────────────────────────────────────────────────────────────
+    val dangerBackground = Color(0xFF93000A).copy(alpha = 0.1f)  // danger zone button background
+    val textDanger       = Color(0xFFFFB4AB)                     // danger zone text
 
     // ── Glow / Decorative ─────────────────────────────────────────────────────
     val glowPurple      = Color(0xFFD0BCFF).copy(alpha = 0.12f)
