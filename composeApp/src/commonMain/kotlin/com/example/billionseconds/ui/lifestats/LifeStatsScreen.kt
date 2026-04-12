@@ -1,17 +1,31 @@
 package com.example.billionseconds.ui.lifestats
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.LifeStatsError
 import com.example.billionseconds.mvi.LifeStatsUiState
 import com.example.billionseconds.mvi.StatItem
+import com.example.billionseconds.ui.theme.AppColors
 
 @Composable
 fun LifeStatsScreen(
@@ -23,168 +37,343 @@ fun LifeStatsScreen(
         onIntent(AppIntent.LifeStatsScreenStarted)
     }
 
-    when {
-        uiState.isLoading -> {
-            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
-
-        uiState.error == LifeStatsError.NoBirthData -> {
-            NoBirthDataPlaceholder(modifier)
-        }
-
-        else -> {
-            LifeStatsContent(uiState = uiState, modifier = modifier)
-        }
-    }
-}
-
-@Composable
-private fun LifeStatsContent(uiState: LifeStatsUiState, modifier: Modifier = Modifier) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(AppColors.backgroundScreen)
     ) {
-        // ── Hero: возраст ─────────────────────────────────────────────────
-        AgeHeroCard(ageLabel = uiState.ageLabel, isApproximate = uiState.isUnknownBirthTime)
+        when {
+            uiState.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppColors.purpleAccent)
+                }
+            }
 
-        // ── Точные статистики ─────────────────────────────────────────────
-        if (uiState.exactStats.isNotEmpty()) {
-            SectionHeader(title = "Точные данные")
-            uiState.exactStats.forEach { item ->
-                LifeStatCard(item = item)
+            uiState.error == LifeStatsError.NoBirthData -> {
+                NoBirthDataPlaceholder()
+            }
+
+            else -> {
+                LifeStatsContent(uiState = uiState)
             }
         }
-
-        // ── Приблизительные статистики ────────────────────────────────────
-        if (uiState.approximateStats.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
-            SectionHeader(title = "Приблизительно")
-
-            if (uiState.isUnknownBirthTime) {
-                ApproximateDisclaimer(
-                    text = "Время рождения не указано. Все расчёты выполнены с полудня дня рождения."
-                )
-            }
-
-            uiState.approximateStats.forEach { item ->
-                LifeStatCard(item = item)
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
     }
 }
 
+// ── Main Content ──────────────────────────────────────────────────────────────
+
 @Composable
-private fun AgeHeroCard(ageLabel: String, isApproximate: Boolean, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+private fun LifeStatsContent(uiState: LifeStatsUiState) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Ambient glows
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(AppColors.glowPurple, Color.Transparent),
+                    center = Offset(size.width - 60.dp.toPx(), 160.dp.toPx()),
+                    radius = 210.dp.toPx()
+                ),
+                radius = 210.dp.toPx(),
+                center = Offset(size.width - 60.dp.toPx(), 160.dp.toPx())
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(AppColors.glowBlue, Color.Transparent),
+                    center = Offset(60.dp.toPx(), size.height - 180.dp.toPx()),
+                    radius = 190.dp.toPx()
+                ),
+                radius = 190.dp.toPx(),
+                center = Offset(60.dp.toPx(), size.height - 180.dp.toPx())
+            )
+        }
+
+        // Scrollable content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 96.dp, bottom = 48.dp)
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            // Age hero
+            AgeHeroCard(
+                ageLabel = uiState.ageLabel,
+                isApproximate = uiState.isUnknownBirthTime
+            )
+
+            // Exact stats
+            if (uiState.exactStats.isNotEmpty()) {
+                Spacer(Modifier.height(28.dp))
+                StatsSectionHeader(title = "ТОЧНЫЕ ДАННЫЕ")
+                Spacer(Modifier.height(10.dp))
+                StatsList(items = uiState.exactStats, isApproximateSection = false)
+            }
+
+            // Approximate stats
+            if (uiState.approximateStats.isNotEmpty()) {
+                Spacer(Modifier.height(28.dp))
+                StatsSectionHeader(title = "ПРИБЛИЗИТЕЛЬНО")
+                Spacer(Modifier.height(10.dp))
+                if (uiState.isUnknownBirthTime) {
+                    ApproximateDisclaimer(
+                        text = "Время рождения не указано. Все расчёты выполнены с полудня дня рождения."
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                StatsList(items = uiState.approximateStats, isApproximateSection = true)
+            }
+        }
+
+        // Frosted glass top bar
+        StatsTopBar()
+    }
+}
+
+// ── Top Bar ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun BoxScope.StatsTopBar() {
+    Row(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .fillMaxWidth()
+            .height(64.dp)
+            .background(AppColors.headerBackground)
+            .padding(horizontal = 32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Text(
+            text = "✦",
+            color = AppColors.purpleAccent,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Life Data",
+            color = AppColors.purpleAccent,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.36).sp
+        )
+    }
+}
+
+// ── Age Hero Card ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun AgeHeroCard(ageLabel: String, isApproximate: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(AppColors.cardDark)
+            .border(1.dp, AppColors.cardBorder, RoundedCornerShape(20.dp))
+    ) {
+        // Top gradient sheen
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            AppColors.purpleAccent.copy(alpha = 0.06f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 28.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "Твой возраст",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                text = "TEMPORAL AGE",
+                color = AppColors.textLabel,
+                fontSize = 11.sp,
+                letterSpacing = 3.sp,
+                fontWeight = FontWeight.Normal
             )
-            Spacer(Modifier.height(6.dp))
+
+            Spacer(Modifier.height(4.dp))
+
+            val displayAge = if (isApproximate) "≈ $ageLabel" else ageLabel
             Text(
-                text = if (isApproximate) "\u2248\u00A0$ageLabel" else ageLabel,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                text = displayAge,
+                style = TextStyle(
+                    brush = Brush.linearGradient(
+                        listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                    ),
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-1.2).sp,
+                    textAlign = TextAlign.Center
+                ),
+                textAlign = TextAlign.Center
             )
+
+            if (isApproximate) {
+                Text(
+                    text = "время рождения не указано",
+                    color = AppColors.textSubtle,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
 
-@Composable
-private fun SectionHeader(title: String, modifier: Modifier = Modifier) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-    )
-}
+// ── Section Header ────────────────────────────────────────────────────────────
 
 @Composable
-private fun ApproximateDisclaimer(text: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small
+private fun StatsSectionHeader(title: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(AppColors.purpleAccent.copy(alpha = 0.6f))
+        )
         Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            text = title,
+            color = AppColors.textLabel,
+            fontSize = 11.sp,
+            letterSpacing = 2.4.sp,
+            fontWeight = FontWeight.Normal
         )
     }
 }
 
+// ── Approximate Disclaimer ────────────────────────────────────────────────────
+
 @Composable
-private fun LifeStatCard(item: StatItem, modifier: Modifier = Modifier) {
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = item.value,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (item.isApproximate)
-                        MaterialTheme.colorScheme.secondary
-                    else
-                        MaterialTheme.colorScheme.primary
-                )
-            }
-            if (item.disclaimer != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = item.disclaimer,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+private fun ApproximateDisclaimer(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(AppColors.dangerBackground)
+            .border(1.dp, AppColors.textDanger.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(text = "◎", color = AppColors.textDanger, fontSize = 13.sp)
+        Text(
+            text = text,
+            color = AppColors.textDanger,
+            fontSize = 12.sp,
+            lineHeight = 18.sp
+        )
+    }
+}
+
+// ── Stats List ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun StatsList(items: List<StatItem>, isApproximateSection: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        items.forEach { item ->
+            StatCard(item = item, isApproximateSection = isApproximateSection)
         }
     }
 }
 
+// ── Stat Card ─────────────────────────────────────────────────────────────────
+
 @Composable
-private fun NoBirthDataPlaceholder(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun StatCard(item: StatItem, isApproximateSection: Boolean) {
+    val valueColor = if (item.isApproximate || isApproximateSection)
+        AppColors.blueAccent
+    else
+        AppColors.purpleAccent
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.cardDark)
+            .border(1.dp, AppColors.cardBorder, RoundedCornerShape(14.dp))
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = item.title,
+                    color = AppColors.textBody,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    lineHeight = 20.sp
+                )
+                item.disclaimer?.let { disclaimer ->
+                    Text(
+                        text = disclaimer,
+                        color = AppColors.textSubtle,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = item.value,
+                color = valueColor,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.4).sp,
+                textAlign = TextAlign.End
+            )
+        }
+    }
+}
+
+// ── No Birth Data ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun NoBirthDataPlaceholder() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(32.dp)
         ) {
-            Text(text = "\uD83D\uDCC5", style = MaterialTheme.typography.displayMedium)
-            Text(text = "Нет данных о дате рождения", style = MaterialTheme.typography.titleMedium)
+            Text(text = "◈", color = AppColors.purpleAccent, fontSize = 48.sp)
+
+            Spacer(Modifier.height(4.dp))
+
             Text(
-                text = "Пройдите онбординг, чтобы увидеть статистику.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Нет данных",
+                color = AppColors.textHeading,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.5).sp
+            )
+            Text(
+                text = "Пройдите онбординг, чтобы\nувидеть статистику.",
+                color = AppColors.textBody,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
             )
         }
     }
