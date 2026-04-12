@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.ProfileConfirmDialog
 import com.example.billionseconds.mvi.ProfileUiState
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun DataManagementContent(
@@ -56,6 +57,7 @@ fun DataManagementContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(bottom = bottomPadding)
     ) {
         Spacer(Modifier.height(8.dp))
 

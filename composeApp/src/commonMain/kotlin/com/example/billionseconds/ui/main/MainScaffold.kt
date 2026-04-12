@@ -24,11 +24,10 @@ fun MainScaffold(
     val selectedTab = (state.screen as? AppScreen.Main)?.tab ?: MainTab.Home
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Screen content — padded at bottom so nothing hides under the floating nav
+        // Screen content
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 72.dp)
         ) {
             when (selectedTab) {
                 MainTab.Home       -> CountdownScreen(state = state, onIntent = onIntent)
@@ -45,7 +44,7 @@ fun MainScaffold(
             onTabSelected = { tab -> onIntent(AppIntent.TabSelected(tab)) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
         )
     }

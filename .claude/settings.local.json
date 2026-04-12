@@ -38,7 +38,8 @@
       "Bash(./gradlew :composeApp:compileKotlinJs)",
       "mcp__plugin_figma_figma__get_design_context",
       "mcp__plugin_figma_figma__get_metadata",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(grep -n \"enum class MainTab\\\\|sealed class\\\\|data object\\\\|data class\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/navigation/*.kt)"
     ]
   }
 }

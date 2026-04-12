@@ -26,6 +26,7 @@ import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.MilestonesError
 import com.example.billionseconds.mvi.MilestonesUiState
 import com.example.billionseconds.ui.theme.AppColors
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun MilestonesScreen(
@@ -116,7 +117,7 @@ private fun MilestonesContent(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = 96.dp,
-                bottom = 48.dp,
+                bottom = bottomPadding,
                 start = 20.dp,
                 end = 20.dp
             ),

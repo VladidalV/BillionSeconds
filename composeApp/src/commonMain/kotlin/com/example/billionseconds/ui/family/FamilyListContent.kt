@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.FamilyUiState
 import com.example.billionseconds.ui.theme.AppColors
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun FamilyListContent(
@@ -70,7 +71,7 @@ fun FamilyListContent(
                     start = 20.dp,
                     end = 20.dp,
                     top = 96.dp,
-                    bottom = 96.dp
+                    bottom = bottomPadding
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

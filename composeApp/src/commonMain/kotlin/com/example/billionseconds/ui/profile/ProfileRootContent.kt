@@ -26,6 +26,7 @@ import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.ProfileSubScreen
 import com.example.billionseconds.mvi.ProfileUiState
 import com.example.billionseconds.ui.theme.AppColors
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun ProfileRootContent(
@@ -42,7 +43,7 @@ fun ProfileRootContent(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = 80.dp,    // below top bar
-                bottom = 32.dp
+                bottom = bottomPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(40.dp)
         ) {

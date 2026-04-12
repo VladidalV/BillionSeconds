@@ -26,6 +26,7 @@ import com.example.billionseconds.mvi.ProfileFormDraft
 import com.example.billionseconds.ui.components.DateInputSection
 import com.example.billionseconds.ui.components.TimeInputSection
 import com.example.billionseconds.ui.theme.AppColors
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun FamilyProfileForm(
@@ -66,7 +67,7 @@ fun FamilyProfileForm(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 96.dp, bottom = 48.dp)
+                .padding(top = 96.dp, bottom = bottomPadding)
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {

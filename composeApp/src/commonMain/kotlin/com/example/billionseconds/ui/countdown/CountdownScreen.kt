@@ -24,6 +24,7 @@ import com.example.billionseconds.mvi.AppState
 import com.example.billionseconds.mvi.CountdownError
 import com.example.billionseconds.ui.shared.ComingSoonSheet
 import com.example.billionseconds.ui.theme.AppColors
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun CountdownScreen(
@@ -103,7 +104,7 @@ private fun CountdownContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 80.dp, bottom = 48.dp)
+                .padding(top = 80.dp, bottom = bottomPadding)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(28.dp)

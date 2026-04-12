@@ -26,6 +26,7 @@ import com.example.billionseconds.mvi.LifeStatsError
 import com.example.billionseconds.mvi.LifeStatsUiState
 import com.example.billionseconds.mvi.StatItem
 import com.example.billionseconds.ui.theme.AppColors
+import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
 @Composable
 fun LifeStatsScreen(
@@ -92,7 +93,7 @@ private fun LifeStatsContent(uiState: LifeStatsUiState) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 96.dp, bottom = 48.dp)
+                .padding(top = 96.dp, bottom = bottomPadding)
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
