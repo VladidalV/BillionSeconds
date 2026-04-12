@@ -18,6 +18,7 @@ import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.ui.event.EventScreen
 import com.example.billionseconds.ui.main.MainScaffold
+import com.example.billionseconds.ui.timecapsule.TimeCapsuleScreen
 import com.example.billionseconds.ui.onboarding.OnboardingInputScreen
 import com.example.billionseconds.ui.onboarding.OnboardingIntroScreen
 import com.example.billionseconds.ui.onboarding.OnboardingResultScreen
@@ -104,6 +105,12 @@ fun App() {
                 EventScreen(
                     state    = state.event,
                     effects  = store.effect,
+                    onIntent = store::dispatch
+                )
+
+            AppScreen.TimeCapsule ->
+                TimeCapsuleScreen(
+                    uiState  = state.timeCapsule,
                     onIntent = store::dispatch
                 )
         }

@@ -111,6 +111,32 @@ sealed class AppIntent {
     // Debug / Testing
     data object DebugOpenEventScreen : AppIntent()
 
+    // Time Capsule Screen
+    sealed class TimeCapsule : AppIntent() {
+        // Lifecycle
+        data object ScreenStarted : TimeCapsule()
+        // List actions
+        data object AddClicked : TimeCapsule()
+        data class  EditClicked(val id: String) : TimeCapsule()
+        data class  OpenClicked(val id: String) : TimeCapsule()
+        data class  DeleteClicked(val id: String) : TimeCapsule()
+        data class  ConfirmDelete(val id: String) : TimeCapsule()
+        data object CancelDelete : TimeCapsule()
+        data object BackClicked : TimeCapsule()
+        // Form intents
+        data class  FormTitleChanged(val value: String) : TimeCapsule()
+        data class  FormMessageChanged(val value: String) : TimeCapsule()
+        data class  FormConditionTypeChanged(val type: ConditionType) : TimeCapsule()
+        data class  FormDateChanged(val year: String, val month: String, val day: String) : TimeCapsule()
+        data class  FormTimeChanged(val hour: String, val minute: String) : TimeCapsule()
+        data class  FormRecipientChanged(val profileId: String?) : TimeCapsule()
+        data class  FormProfileConditionChanged(val profileId: String) : TimeCapsule()
+        data object FormSaveClicked : TimeCapsule()
+        data object FormSaveDraftClicked : TimeCapsule()
+        data object FormCancelClicked : TimeCapsule()
+        data object DiscardDraftConfirmed : TimeCapsule()
+    }
+
     // Event Screen
     sealed class Event : AppIntent() {
         // Lifecycle

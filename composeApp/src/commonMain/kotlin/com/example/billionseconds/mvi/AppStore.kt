@@ -3,7 +3,16 @@ package com.example.billionseconds.mvi
 import com.example.billionseconds.data.AppSettingsRepository
 import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.FamilyProfileRepository
+import com.example.billionseconds.data.TimeCapsuleRepository
+import com.example.billionseconds.data.createTimeCapsuleStorage
 import com.example.billionseconds.data.event.EventHistoryRepository
+import com.example.billionseconds.domain.CapsuleListGrouper
+import com.example.billionseconds.domain.CapsuleStatus
+import com.example.billionseconds.domain.CapsuleUiMapper
+import com.example.billionseconds.domain.CapsuleUnlockResolver
+import com.example.billionseconds.domain.TimeCapsuleValidator
+import com.example.billionseconds.domain.model.TimeCapsule
+import com.example.billionseconds.domain.model.UnlockCondition
 import com.example.billionseconds.data.model.BirthdayData
 import com.example.billionseconds.data.model.FamilyProfile
 import com.example.billionseconds.data.model.RelationType
@@ -39,6 +48,7 @@ import com.example.billionseconds.util.currentInstant
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.datetime.Instant
+import kotlinx.datetime.toLocalDateTime
 
 private const val MAX_PROFILES = 5
 private const val PRIMARY_PROFILE_ID = "self_primary"
@@ -55,6 +65,8 @@ class AppStore(
     private val eventEligibilityChecker = EventEligibilityChecker(eventHistoryRepository)
     private val eventHistoryManager = EventHistoryManager(eventHistoryRepository)
     private val eventDataBuilder = EventScreenDataBuilder(eventEligibilityChecker, eventHistoryManager)
+
+    private val timeCapsuleRepository = TimeCapsuleRepository(createTimeCapsuleStorage())
 
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -137,7 +149,9 @@ class AppStore(
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
             is AppIntent.AddFamilyClicked           -> emitEffect(AppEffect.ShowComingSoon("add_family"))
             is AppIntent.BackClicked -> {
-                if (_state.value.screen is AppScreen.Main) {
+                if (_state.value.screen is AppScreen.TimeCapsule) {
+                    _state.update { it.copy(screen = AppScreen.Main()) }
+                } else if (_state.value.screen is AppScreen.Main) {
                     val profileSubScreen = _state.value.profile.subScreen
                     if (profileSubScreen !is ProfileSubScreen.Root) {
                         // Есть открытый sub-screen Profile — возврат на Root
@@ -157,7 +171,7 @@ class AppStore(
             is AppIntent.ProfileScreenResumed       -> onProfileResumed()
             is AppIntent.ActiveProfileSummaryClicked -> emitEffect(AppEffect.NavigateToFamily)
             is AppIntent.PremiumClicked             -> emitEffect(AppEffect.ShowComingSoon("premium"))
-            is AppIntent.TimeCapsuleClicked         -> emitEffect(AppEffect.ShowComingSoon("time_capsule"))
+            is AppIntent.TimeCapsuleClicked         -> navigateToTimeCapsule()
             is AppIntent.HelpClicked                -> emitEffect(AppEffect.ShowComingSoon("help"))
             is AppIntent.LegalLinkClicked           -> onLegalLinkClicked(intent.type)
             is AppIntent.NotificationsToggled,
@@ -185,6 +199,20 @@ class AppStore(
             is AppIntent.Event.ProfileChanged       -> onEventProfileChanged(intent.newProfileId)
             is AppIntent.Event.BackPressed,
             is AppIntent.Event.DismissClicked       -> Unit // reducer handles navigation
+            // Time Capsule Screen
+            is AppIntent.TimeCapsule.ScreenStarted         -> loadTimeCapsules()
+            is AppIntent.TimeCapsule.EditClicked           -> openTimeCapsuleForEdit(intent.id)
+            is AppIntent.TimeCapsule.OpenClicked           -> openTimeCapsule(intent.id)
+            is AppIntent.TimeCapsule.ConfirmDelete         -> deleteTimeCapsule(intent.id)
+            is AppIntent.TimeCapsule.FormSaveClicked       -> saveTimeCapsule(isDraft = false)
+            is AppIntent.TimeCapsule.FormSaveDraftClicked  -> saveTimeCapsule(isDraft = true)
+            is AppIntent.TimeCapsule.BackClicked -> {
+                val sub = _state.value.timeCapsule.subScreen
+                if (sub is TimeCapsuleSubScreen.List) {
+                    _state.update { it.copy(screen = AppScreen.Main()) }
+                }
+                // Остальные случаи (Create/Edit/Open) обрабатываются в reducer
+            }
             else -> Unit
         }
     }
@@ -1075,4 +1103,169 @@ class AppStore(
     }
 
     fun dispose() = scope.cancel()
+
+    // ── Time Capsule ──────────────────────────────────────────────────────────
+
+    private fun navigateToTimeCapsule() {
+        _state.update { it.copy(screen = AppScreen.TimeCapsule) }
+    }
+
+    private fun loadTimeCapsules() {
+        val capsules = timeCapsuleRepository.getAll()
+        val nowMs = currentInstant().toEpochMilliseconds()
+        val profiles = familyRepository.loadProfiles()
+        val items = capsules.map { capsule ->
+            val status = CapsuleUnlockResolver.resolve(capsule, nowMs, profiles)
+            CapsuleUiMapper.toUiItem(capsule, status, profiles)
+        }
+        val groups = CapsuleListGrouper.group(items)
+        _state.update { it.copy(
+            timeCapsule = it.timeCapsule.copy(
+                isLoading = false,
+                groups = groups,
+                error = null
+            )
+        )}
+    }
+
+    private fun openTimeCapsule(id: String) {
+        val capsule = timeCapsuleRepository.getAll().firstOrNull { it.id == id } ?: return
+        val nowMs = currentInstant().toEpochMilliseconds()
+        val profiles = familyRepository.loadProfiles()
+        val status = CapsuleUnlockResolver.resolve(capsule, nowMs, profiles)
+        if (status is CapsuleStatus.Available) {
+            timeCapsuleRepository.markOpened(id)
+            val opened = capsule.copy(openedAt = nowMs)
+            _state.update { it.copy(
+                timeCapsule = it.timeCapsule.copy(
+                    subScreen = TimeCapsuleSubScreen.Open(id),
+                    openedCapsule = opened
+                )
+            )}
+            loadTimeCapsules()
+        } else if (status is CapsuleStatus.Opened) {
+            _state.update { it.copy(
+                timeCapsule = it.timeCapsule.copy(
+                    subScreen = TimeCapsuleSubScreen.Open(id),
+                    openedCapsule = capsule
+                )
+            )}
+        }
+    }
+
+    private fun openTimeCapsuleForEdit(id: String) {
+        val capsule = timeCapsuleRepository.getAll().firstOrNull { it.id == id } ?: return
+        val draft = capsuleToFormDraft(capsule)
+        _state.update { it.copy(
+            timeCapsule = it.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.Edit(id),
+                formDraft = draft
+            )
+        )}
+    }
+
+    private fun capsuleToFormDraft(capsule: TimeCapsule): CapsuleFormDraft {
+        val conditionType: ConditionType
+        var year = ""; var month = ""; var day = ""; var hour = "12"; var minute = "00"
+        var profileId: String? = null
+
+        when (val c = capsule.unlockCondition) {
+            is UnlockCondition.ExactDateTime -> {
+                conditionType = ConditionType.DATE
+                val dt = kotlinx.datetime.Instant.fromEpochMilliseconds(c.epochMillis)
+                    .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+                year   = dt.year.toString()
+                month  = dt.monthNumber.toString().padStart(2, '0')
+                day    = dt.dayOfMonth.toString().padStart(2, '0')
+                hour   = dt.hour.toString().padStart(2, '0')
+                minute = dt.minute.toString().padStart(2, '0')
+            }
+            is UnlockCondition.BillionSecondsEvent -> {
+                conditionType = ConditionType.BILLION_SECONDS_EVENT
+                profileId = c.profileId
+            }
+        }
+
+        return CapsuleFormDraft(
+            id = capsule.id,
+            title = capsule.title,
+            message = capsule.message,
+            recipientProfileId = capsule.recipientProfileId,
+            conditionType = conditionType,
+            selectedYear = year,
+            selectedMonth = month,
+            selectedDay = day,
+            selectedHour = hour,
+            selectedMinute = minute,
+            selectedProfileId = profileId,
+            isDirty = false
+        )
+    }
+
+    private fun deleteTimeCapsule(id: String) {
+        try {
+            timeCapsuleRepository.delete(id)
+            loadTimeCapsules()
+        } catch (e: Exception) {
+            _state.update { it.copy(timeCapsule = it.timeCapsule.copy(error = TimeCapsuleError.DeleteFailed)) }
+        }
+    }
+
+    private fun saveTimeCapsule(isDraft: Boolean) {
+        val draft = _state.value.timeCapsule.formDraft ?: return
+        val nowMs = currentInstant().toEpochMilliseconds()
+
+        if (!isDraft) {
+            val validation = TimeCapsuleValidator.validate(draft, nowMs)
+            if (!validation.isValid) {
+                _state.update { it.copy(
+                    timeCapsule = it.timeCapsule.copy(
+                        formDraft = it.timeCapsule.formDraft?.copy(
+                            titleError = validation.titleError,
+                            messageError = validation.messageError,
+                            conditionError = validation.conditionError
+                        )
+                    )
+                )}
+                return
+            }
+        }
+
+        val unlockCondition: UnlockCondition = when (draft.conditionType) {
+            ConditionType.DATE -> {
+                val ms = TimeCapsuleValidator.parseDateToMs(
+                    draft.selectedYear, draft.selectedMonth, draft.selectedDay,
+                    draft.selectedHour, draft.selectedMinute
+                ) ?: return
+                UnlockCondition.ExactDateTime(ms)
+            }
+            ConditionType.BILLION_SECONDS_EVENT -> {
+                val profileId = draft.selectedProfileId ?: return
+                UnlockCondition.BillionSecondsEvent(profileId)
+            }
+        }
+
+        val capsule = TimeCapsule(
+            id = draft.id ?: timeCapsuleRepository.generateId(),
+            title = draft.title.trim(),
+            message = draft.message.trim(),
+            recipientProfileId = draft.recipientProfileId,
+            unlockCondition = unlockCondition,
+            createdAt = nowMs,
+            isDraft = isDraft
+        )
+
+        try {
+            timeCapsuleRepository.save(capsule)
+            _state.update { it.copy(
+                timeCapsule = it.timeCapsule.copy(
+                    subScreen = TimeCapsuleSubScreen.List,
+                    formDraft = null
+                )
+            )}
+            loadTimeCapsules()
+        } catch (e: Exception) {
+            _state.update { it.copy(timeCapsule = it.timeCapsule.copy(error = TimeCapsuleError.SaveFailed)) }
+        }
+    }
 }

@@ -354,6 +354,112 @@ object AppReducer {
 
         is AppIntent.Event.ProfileChanged ->
             state.copy(event = state.event.copy(autoOpenTriggered = false))
+
+        // Time Capsule Screen
+        is AppIntent.TimeCapsule.ScreenStarted ->
+            state.copy(timeCapsule = state.timeCapsule.copy(isLoading = true, error = null))
+
+        is AppIntent.TimeCapsule.AddClicked ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.Create,
+                formDraft = CapsuleFormDraft()
+            ))
+
+        is AppIntent.TimeCapsule.EditClicked ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.Edit(intent.id)
+            ))
+
+        is AppIntent.TimeCapsule.OpenClicked ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.Open(intent.id)
+            ))
+
+        is AppIntent.TimeCapsule.DeleteClicked ->
+            state.copy(timeCapsule = state.timeCapsule.copy(confirmDeleteId = intent.id))
+
+        is AppIntent.TimeCapsule.CancelDelete ->
+            state.copy(timeCapsule = state.timeCapsule.copy(confirmDeleteId = null))
+
+        is AppIntent.TimeCapsule.ConfirmDelete ->
+            state.copy(timeCapsule = state.timeCapsule.copy(confirmDeleteId = null))
+
+        is AppIntent.TimeCapsule.BackClicked ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.List,
+                formDraft = null,
+                openedCapsule = null
+            ))
+
+        is AppIntent.TimeCapsule.FormTitleChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    title = intent.value, titleError = null, isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormMessageChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    message = intent.value, messageError = null, isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormConditionTypeChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    conditionType = intent.type, conditionError = null, isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormDateChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    selectedYear = intent.year,
+                    selectedMonth = intent.month,
+                    selectedDay = intent.day,
+                    conditionError = null,
+                    isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormTimeChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    selectedHour = intent.hour,
+                    selectedMinute = intent.minute,
+                    isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormRecipientChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    recipientProfileId = intent.profileId, isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormProfileConditionChanged ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                formDraft = state.timeCapsule.formDraft?.copy(
+                    selectedProfileId = intent.profileId, conditionError = null, isDirty = true
+                )
+            ))
+
+        is AppIntent.TimeCapsule.FormSaveClicked     -> state // validation + save in Store
+        is AppIntent.TimeCapsule.FormSaveDraftClicked -> state // save in Store
+
+        is AppIntent.TimeCapsule.FormCancelClicked ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.List,
+                formDraft = null
+            ))
+
+        is AppIntent.TimeCapsule.DiscardDraftConfirmed ->
+            state.copy(timeCapsule = state.timeCapsule.copy(
+                subScreen = TimeCapsuleSubScreen.List,
+                formDraft = null
+            ))
     }
 }
 

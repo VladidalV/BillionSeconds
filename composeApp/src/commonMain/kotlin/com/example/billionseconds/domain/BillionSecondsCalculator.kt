@@ -43,4 +43,7 @@ object BillionSecondsCalculator {
 
     fun isReached(milestone: Instant, now: Instant): Boolean =
         now >= milestone
+
+    fun birthEpochMs(data: BirthdayData): Long =
+        birthInstantFrom(data).toEpochMilliseconds()
 }

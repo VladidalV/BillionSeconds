@@ -43,5 +43,8 @@ data class AppState(
     val profile: ProfileUiState = ProfileUiState(),
 
     // Event Screen
-    val event: EventUiState = EventUiState()
+    val event: EventUiState = EventUiState(),
+
+    // Time Capsule screen
+    val timeCapsule: TimeCapsuleUiState = TimeCapsuleUiState()
 )

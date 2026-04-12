@@ -11,4 +11,5 @@ sealed class AppScreen {
         val profileId: String,
         val source: EventSource = EventSource.MANUAL
     ) : AppScreen()
+    data object TimeCapsule : AppScreen()
 }
