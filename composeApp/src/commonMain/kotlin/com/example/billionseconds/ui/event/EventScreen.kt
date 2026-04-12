@@ -1,18 +1,25 @@
 package com.example.billionseconds.ui.event
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,6 +28,7 @@ import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.event.EventScreenStatus
 import com.example.billionseconds.mvi.event.EventUiState
+import com.example.billionseconds.ui.theme.AppColors
 import kotlinx.coroutines.flow.SharedFlow
 
 @Composable
@@ -31,7 +39,6 @@ fun EventScreen(
 ) {
     var celebrationVisible by remember { mutableStateOf(false) }
 
-    // Подписка на эффекты celebration
     LaunchedEffect(effects) {
         effects.collect { effect ->
             when (effect) {
@@ -47,7 +54,7 @@ fun EventScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AppColors.backgroundScreen)
     ) {
         when (state.screenStatus) {
             EventScreenStatus.Loading -> EventLoadingContent()
@@ -69,13 +76,9 @@ fun EventScreen(
             EventScreenStatus.Repeat -> {
                 val uiModel = state.uiModel
                 if (uiModel != null) {
-                    EventMainContent(
-                        state    = state,
-                        onIntent = onIntent
-                    )
+                    EventMainContent(state = state, onIntent = onIntent)
                 }
 
-                // Celebration overlay поверх контента
                 if (celebrationVisible && state.screenStatus == EventScreenStatus.FirstTime) {
                     CelebrationOverlay(
                         onSkip = {
@@ -93,6 +96,8 @@ fun EventScreen(
     }
 }
 
+// ── Main Content ──────────────────────────────────────────────────────────────
+
 @Composable
 private fun EventMainContent(
     state: EventUiState,
@@ -101,116 +106,246 @@ private fun EventMainContent(
     val uiModel = state.uiModel ?: return
     val actionsVisible = !state.isCelebrationRunning || state.celebrationCompleted
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.height(48.dp))
-
-        // Repeat mode note
-        uiModel.repeatModeNote?.let { note ->
-            Text(
-                text  = note,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Ambient glows
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(AppColors.glowPurple, Color.Transparent),
+                    center = Offset(96.dp.toPx(), 200.dp.toPx()),
+                    radius = 220.dp.toPx()
+                ),
+                radius = 220.dp.toPx(),
+                center = Offset(96.dp.toPx(), 200.dp.toPx())
             )
-            Spacer(Modifier.height(12.dp))
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(AppColors.glowBlue, Color.Transparent),
+                    center = Offset(size.width - 80.dp.toPx(), size.height - 200.dp.toPx()),
+                    radius = 200.dp.toPx()
+                ),
+                radius = 200.dp.toPx(),
+                center = Offset(size.width - 80.dp.toPx(), size.height - 200.dp.toPx())
+            )
         }
 
-        // Profile label
-        Text(
-            text  = uiModel.profileLabel,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(16.dp))
-
-        // Title
-        Text(
-            text       = uiModel.title,
-            style      = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-            textAlign  = TextAlign.Center,
-            color      = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(Modifier.height(8.dp))
-
-        // Subtitle
-        Text(
-            text  = uiModel.subtitle,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(24.dp))
-
-        // Event date
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        // Scrollable content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 96.dp, bottom = 48.dp)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            // Repeat mode note
+            uiModel.repeatModeNote?.let { note ->
                 Text(
-                    text  = uiModel.eventDateText,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium),
+                    text = note,
+                    color = AppColors.textSubtle,
+                    fontSize = 12.sp,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface
+                    lineHeight = 18.sp
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Profile label
+            Text(
+                text = uiModel.profileLabel.uppercase(),
+                color = AppColors.textLabel,
+                fontSize = 11.sp,
+                letterSpacing = 2.sp,
+                fontWeight = FontWeight.Normal
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // Title
+            Text(
+                text = uiModel.title,
+                color = AppColors.textHeading,
+                fontSize = 34.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-1.2).sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 40.sp
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            // Subtitle
+            Text(
+                text = uiModel.subtitle,
+                color = AppColors.purpleAccent,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
+            )
+
+            Spacer(Modifier.height(40.dp))
+
+            // Date card
+            EventDateCard(uiModel = uiModel)
+
+            Spacer(Modifier.height(40.dp))
+
+            // Action buttons
+            AnimatedVisibility(
+                visible = actionsVisible,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                EventActionButtons(uiModel = uiModel, onIntent = onIntent)
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Dismiss button
+            if (state.isBackAllowed) {
                 Text(
-                    text  = uiModel.reachedText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Закрыть",
+                    color = AppColors.textLabel,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .clickable { onIntent(AppIntent.Event.DismissClicked) }
+                        .padding(vertical = 8.dp, horizontal = 16.dp)
                 )
-                if (uiModel.isApproximateLabelVisible) {
-                    Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        // Frosted top bar
+        EventTopBar()
+    }
+}
+
+// ── Top Bar ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun BoxScope.EventTopBar() {
+    Row(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .fillMaxWidth()
+            .height(64.dp)
+            .background(AppColors.headerBackground)
+            .padding(horizontal = 32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "✦",
+            color = AppColors.purpleAccent,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Billion Seconds",
+            color = AppColors.purpleAccent,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.36).sp
+        )
+    }
+}
+
+// ── Date Card ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun EventDateCard(uiModel: com.example.billionseconds.mvi.event.EventUiModel) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(AppColors.cardDark)
+    ) {
+        // Subtle gradient overlay inside card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            AppColors.purpleAccent.copy(alpha = 0.05f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "TEMPORAL TARGET",
+                color = AppColors.purpleAccent.copy(alpha = 0.6f),
+                fontSize = 10.sp,
+                letterSpacing = 4.sp,
+                fontWeight = FontWeight.Normal
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // Event date with gradient text
+            Text(
+                text = uiModel.eventDateText,
+                style = TextStyle(
+                    brush = Brush.linearGradient(
+                        listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                    ),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.8).sp,
+                    textAlign = TextAlign.Center
+                ),
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = uiModel.reachedText,
+                color = AppColors.textBody,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 19.sp
+            )
+
+            if (uiModel.isApproximateLabelVisible) {
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AppColors.dangerBackground)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
                     Text(
-                        text  = uiModel.approximateLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        text = uiModel.approximateLabel,
+                        color = AppColors.textDanger,
+                        fontSize = 11.sp,
                         textAlign = TextAlign.Center
                     )
                 }
             }
         }
-
-        Spacer(Modifier.height(32.dp))
-
-        // Action buttons — скрыты во время celebration
-        AnimatedVisibility(
-            visible = actionsVisible,
-            enter   = fadeIn(),
-            exit    = fadeOut()
-        ) {
-            EventActionButtons(
-                uiModel  = uiModel,
-                onIntent = onIntent
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        // Dismiss / Back button — только в repeat mode или после celebration
-        if (state.isBackAllowed) {
-            TextButton(onClick = { onIntent(AppIntent.Event.DismissClicked) }) {
-                Text("Закрыть")
-            }
-        }
     }
 }
+
+// ── Loading ───────────────────────────────────────────────────────────────────
 
 @Composable
 private fun EventLoadingContent() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = AppColors.purpleAccent)
     }
 }
+
+// ── Error ─────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun EventErrorContent(
@@ -221,21 +356,60 @@ private fun EventErrorContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text      = message,
-            style     = MaterialTheme.typography.bodyLarge,
+            text = message,
+            color = AppColors.textBody,
+            fontSize = 16.sp,
             textAlign = TextAlign.Center,
-            color     = MaterialTheme.colorScheme.onBackground
+            lineHeight = 24.sp
         )
-        Spacer(Modifier.height(24.dp))
-        onRetry?.let {
-            Button(onClick = it) { Text("Попробовать снова") }
-            Spacer(Modifier.height(8.dp))
+
+        Spacer(Modifier.height(32.dp))
+
+        onRetry?.let { retry ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                        )
+                    )
+                    .clickable(onClick = retry)
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Попробовать снова",
+                    color = AppColors.buttonText,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
         }
-        OutlinedButton(onClick = onGoHome) { Text("На главную") }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(50))
+                .background(AppColors.cardDark)
+                .clickable(onClick = onGoHome)
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "На главную",
+                color = AppColors.textBody,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
