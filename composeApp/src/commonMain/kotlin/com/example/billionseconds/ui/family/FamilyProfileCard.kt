@@ -1,13 +1,22 @@
 package com.example.billionseconds.ui.family
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.billionseconds.mvi.FamilyProfileUiItem
+import com.example.billionseconds.ui.theme.AppColors
 
 @Composable
 fun FamilyProfileCard(
@@ -17,136 +26,240 @@ fun FamilyProfileCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val containerColor = when {
-        item.isActive  -> MaterialTheme.colorScheme.primaryContainer
-        item.isPrimary -> MaterialTheme.colorScheme.secondaryContainer
-        else           -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val onContainerColor = when {
-        item.isActive  -> MaterialTheme.colorScheme.onPrimaryContainer
-        item.isPrimary -> MaterialTheme.colorScheme.onSecondaryContainer
-        else           -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val cardBorderColor = if (item.isActive)
+        AppColors.purpleAccent.copy(alpha = 0.25f)
+    else
+        AppColors.cardBorder
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(AppColors.cardDark)
+            .border(1.dp, cardBorderColor, RoundedCornerShape(18.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header row: emoji + name + active badge
+        // Active indicator: left accent bar
+        if (item.isActive) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(48.dp)
+                    .align(Alignment.TopStart)
+                    .offset(y = 20.dp)
+                    .clip(RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                        )
+                    )
+            )
+        }
+
+        Column(modifier = Modifier.padding(20.dp)) {
+            // ── Header row ────────────────────────────────────────────────────
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(text = item.relationEmoji, style = MaterialTheme.typography.titleLarge)
+                // Avatar circle with emoji
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (item.isActive)
+                                Brush.linearGradient(
+                                    listOf(
+                                        AppColors.purpleAccent.copy(alpha = 0.25f),
+                                        AppColors.blueAccent.copy(alpha = 0.15f)
+                                    )
+                                )
+                            else
+                                Brush.linearGradient(
+                                    listOf(AppColors.cardMid, AppColors.cardMid)
+                                )
+                        )
+                        .border(
+                            1.dp,
+                            if (item.isActive) AppColors.purpleAccent.copy(alpha = 0.3f)
+                            else AppColors.cardBorder,
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = item.relationEmoji,
+                        fontSize = 20.sp
+                    )
+                }
+
+                // Name + relation
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        color = AppColors.textHeading,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = onContainerColor
+                        letterSpacing = (-0.3).sp
                     )
                     Text(
                         text = item.relationLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = onContainerColor.copy(alpha = 0.7f)
+                        color = AppColors.textLabel,
+                        fontSize = 12.sp
                     )
                 }
+
+                // Active badge
                 if (item.isActive) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(AppColors.purpleAccent.copy(alpha = 0.15f))
+                            .border(
+                                1.dp,
+                                AppColors.purpleAccent.copy(alpha = 0.3f),
+                                RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "✓ Активен",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            text = "Активен",
+                            color = AppColors.purpleAccent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Stats
+            // ── Stats divider ─────────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(AppColors.divider)
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            // ── Stats 2×2 grid ────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatColumn(
-                    label = "Дата рождения",
+                StatCell(
+                    label = "ДАТА РОЖДЕНИЯ",
                     value = item.birthDateText,
-                    color = onContainerColor,
+                    valueColor = AppColors.textBody,
                     modifier = Modifier.weight(1f)
                 )
-                StatColumn(
-                    label = "Миллиард секунд",
+                StatCell(
+                    label = "МИЛЛИАРД СЕКУНД",
                     value = item.billionDateText,
-                    color = onContainerColor,
+                    valueColor = AppColors.textBody,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatColumn(
-                    label = "Прогресс",
+                StatCell(
+                    label = "ПРОГРЕСС",
                     value = item.progressText,
-                    color = onContainerColor,
+                    valueColor = AppColors.purpleAccent,
                     modifier = Modifier.weight(1f)
                 )
-                StatColumn(
-                    label = "Осталось",
+                StatCell(
+                    label = "ОСТАЛОСЬ",
                     value = item.countdownText,
-                    color = onContainerColor,
+                    valueColor = AppColors.blueAccent,
                     modifier = Modifier.weight(1f)
                 )
             }
 
+            // Approximate note
             if (item.hasApproximateTime) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = "~ время рождения не указано",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = onContainerColor.copy(alpha = 0.6f)
+                    color = AppColors.textSubtle,
+                    fontSize = 11.sp
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Action buttons
+            // ── Actions ───────────────────────────────────────────────────────
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (!item.isActive) {
-                    OutlinedButton(
-                        onClick = onSetActive,
-                        modifier = Modifier.weight(1f)
+                    // "Выбрать" — gradient
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(AppColors.buttonGradientStart, AppColors.buttonGradientEnd)
+                                )
+                            )
+                            .clickable(onClick = onSetActive)
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Выбрать", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-                if (item.isEditable) {
-                    OutlinedButton(
-                        onClick = onEdit,
-                        modifier = if (item.isActive) Modifier.weight(1f) else Modifier
-                    ) {
-                        Text("Изменить", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-                if (item.isDeletable) {
-                    OutlinedButton(
-                        onClick = onDelete,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
+                        Text(
+                            text = "Выбрать",
+                            color = AppColors.buttonText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
+                    }
+                }
+
+                if (item.isEditable) {
+                    Box(
+                        modifier = Modifier
+                            .then(if (item.isActive) Modifier.weight(1f) else Modifier)
+                            .clip(RoundedCornerShape(50))
+                            .background(AppColors.cardMid)
+                            .border(1.dp, AppColors.inputBorder, RoundedCornerShape(50))
+                            .clickable(onClick = onEdit)
+                            .padding(vertical = 10.dp, horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Удалить", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = "Изменить",
+                            color = AppColors.textBody,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                if (item.isDeletable) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(AppColors.dangerBackground)
+                            .border(1.dp, AppColors.textDanger.copy(alpha = 0.2f), RoundedCornerShape(50))
+                            .clickable(onClick = onDelete)
+                            .padding(vertical = 10.dp, horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Удалить",
+                            color = AppColors.textDanger,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -154,24 +267,32 @@ fun FamilyProfileCard(
     }
 }
 
+// ── Stat Cell ─────────────────────────────────────────────────────────────────
+
 @Composable
-private fun StatColumn(
+private fun StatCell(
     label: String,
     value: String,
-    color: androidx.compose.ui.graphics.Color,
+    valueColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = color.copy(alpha = 0.6f)
+            color = AppColors.textLabel,
+            fontSize = 9.sp,
+            letterSpacing = 1.sp,
+            fontWeight = FontWeight.Normal
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = color
+            color = valueColor,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.2).sp
         )
     }
 }
