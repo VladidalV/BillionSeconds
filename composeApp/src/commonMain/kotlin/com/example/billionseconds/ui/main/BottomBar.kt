@@ -31,7 +31,7 @@ fun BottomBar(
                 .widthIn(max = 351.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(9999.dp))
-                .background(AppColors.navBarBackground)
+                .background(AppColors.navBarGradient)
                 .border(1.dp, AppColors.navBarBorder, RoundedCornerShape(9999.dp))
                 .padding(vertical = 8.dp, horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,

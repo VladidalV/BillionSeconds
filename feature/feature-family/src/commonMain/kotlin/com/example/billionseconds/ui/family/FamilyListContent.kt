@@ -68,7 +68,7 @@ fun FamilyListContent(
                 contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
-                    top = 96.dp,
+                    top = 24.dp,
                     bottom = bottomPadding
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -146,31 +146,6 @@ fun FamilyListContent(
             }
         }
 
-        // Frosted top bar
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .height(64.dp)
-                .background(AppColors.headerBackground)
-                .padding(horizontal = 32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "✦",
-                color = AppColors.purpleAccent,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Family",
-                color = AppColors.purpleAccent,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.36).sp
-            )
-        }
     }
 }
 

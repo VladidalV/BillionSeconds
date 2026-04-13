@@ -1,5 +1,6 @@
 package com.example.billionseconds.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 object AppColors {
@@ -52,6 +53,8 @@ object AppColors {
     val ringDecoration  = Color(0xFF494454).copy(alpha = 0.10f)  // orbital ring around circular dial
 
     // ── Navigation ────────────────────────────────────────────────────────────
-    val navBarBackground = Color(0xFF2E3447).copy(alpha = 0.6f)  // floating pill nav bar
-    val navBarBorder     = Color.White.copy(alpha = 0.06f)        // subtle pill border
+    val navBarGradient = Brush.verticalGradient(
+        colors = listOf(Color(0xFF0F1729), Color(0xFF070D1F))
+    )
+    val navBarBorder   = Color.White.copy(alpha = 0.06f)  // subtle pill border
 }

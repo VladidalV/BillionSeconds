@@ -94,7 +94,7 @@ private fun CountdownContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 80.dp, bottom = bottomPadding)
+                .padding(top = 24.dp, bottom = bottomPadding)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(28.dp)
@@ -105,42 +105,6 @@ private fun CountdownContent(
             ActionsBlock(onAction = onAction)
         }
 
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .height(64.dp)
-                .background(AppColors.headerBackground)
-                .padding(horizontal = 32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "✦",
-                    color = AppColors.purpleAccent,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Billion Seconds",
-                    color = AppColors.purpleAccent,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.36).sp
-                )
-            }
-            if (uiState.activeProfileName != null) {
-                Text(
-                    text = uiState.activeProfileName,
-                    color = AppColors.textLabel,
-                    fontSize = 13.sp
-                )
-            }
-        }
     }
 }
 

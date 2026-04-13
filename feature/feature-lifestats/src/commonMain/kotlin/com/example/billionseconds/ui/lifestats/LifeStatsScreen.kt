@@ -89,7 +89,7 @@ private fun LifeStatsContent(uiState: LifeStatsUiState) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 96.dp, bottom = bottomPadding)
+                .padding(top = 24.dp, bottom = bottomPadding)
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
@@ -122,38 +122,6 @@ private fun LifeStatsContent(uiState: LifeStatsUiState) {
             }
         }
 
-        // Frosted glass top bar
-        StatsTopBar()
-    }
-}
-
-// ── Top Bar ───────────────────────────────────────────────────────────────────
-
-@Composable
-private fun BoxScope.StatsTopBar() {
-    Row(
-        modifier = Modifier
-            .align(Alignment.TopStart)
-            .fillMaxWidth()
-            .height(64.dp)
-            .background(AppColors.headerBackground)
-            .padding(horizontal = 32.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "✦",
-            color = AppColors.purpleAccent,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Life Data",
-            color = AppColors.purpleAccent,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-0.36).sp
-        )
     }
 }
 

@@ -38,7 +38,7 @@ fun ProfileRootContent(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = 80.dp,
+                top = 24.dp,
                 bottom = bottomPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(40.dp)
@@ -62,47 +62,6 @@ fun ProfileRootContent(
             }
         }
 
-        ProfileTopBar()
-    }
-}
-
-// ── Top Bar ───────────────────────────────────────────────────────────────────
-
-@Composable
-private fun BoxScope.ProfileTopBar() {
-    Row(
-        modifier = Modifier
-            .align(Alignment.TopStart)
-            .fillMaxWidth()
-            .height(64.dp)
-            .background(AppColors.headerBackground)
-            .padding(horizontal = 32.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "✦",
-                color = AppColors.purpleAccent,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Billion Seconds",
-                color = AppColors.purpleAccent,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.36).sp
-            )
-        }
-        Text(
-            text = "⊙",
-            color = AppColors.textLabel,
-            fontSize = 18.sp
-        )
     }
 }
 
