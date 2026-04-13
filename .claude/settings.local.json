@@ -58,7 +58,10 @@
       "Bash(ls:*)",
       "Bash(./gradlew build:*)",
       "Bash(./gradlew :app:assembleDebug :app:linkDebugFrameworkIosArm64)",
-      "Bash(./gradlew :app:linkDebugFrameworkIosSimulatorArm64)"
+      "Bash(./gradlew :app:linkDebugFrameworkIosSimulatorArm64)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(./gradlew :app:embedAndSignAppleFrameworkForXcode)",
+      "Bash(./gradlew :app:tasks)"
     ]
   }
 }
