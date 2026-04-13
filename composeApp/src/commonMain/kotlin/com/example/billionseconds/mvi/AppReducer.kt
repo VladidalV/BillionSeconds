@@ -2,8 +2,6 @@ package com.example.billionseconds.mvi
 
 import com.example.billionseconds.domain.event.model.EventMode
 import com.example.billionseconds.mvi.event.EventScreenStatus
-import com.example.billionseconds.navigation.AppScreen
-import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.data.model.RelationType
 import com.example.billionseconds.data.model.AppSettings
 
@@ -13,7 +11,7 @@ object AppReducer {
 
         // Onboarding Screen 1
         is AppIntent.StartClicked ->
-            state.copy(screen = AppScreen.OnboardingInput, error = null)
+            state.copy(error = null)
 
         // Onboarding Screen 2
         is AppIntent.OnboardingDateChanged ->
@@ -59,27 +57,20 @@ object AppReducer {
                 unknownTime = false
             )
 
-        // Bottom navigation — guard: повторный тап на текущую вкладку игнорируется
-        is AppIntent.TabSelected -> {
-            val currentTab = (state.screen as? AppScreen.Main)?.tab
-            if (currentTab == intent.tab) state
-            else state.copy(
-                screen = AppScreen.Main(tab = intent.tab),
-                // Прерывание формы при смене вкладки из Family
-                family = if (currentTab == MainTab.Family) state.family
-                else state.family.copy(
+        // Bottom navigation — navigator handles routing; reducer resets sub-states
+        is AppIntent.TabSelected ->
+            state.copy(
+                family = state.family.copy(
                     formDraft = null,
                     subScreen = FamilySubScreen.List,
                     isDeleteConfirmationVisible = false,
                     pendingDeleteId = null
                 ),
-                // Сброс Profile sub-screen при смене вкладки из Profile
-                profile = if (currentTab == MainTab.Profile) state.profile.copy(
+                profile = state.profile.copy(
                     subScreen = ProfileSubScreen.Root,
                     confirmDialog = null
-                ) else state.profile
+                )
             )
-        }
 
         // Countdown screen — lifecycle (side effects handled in Store)
         is AppIntent.CountdownScreenStarted -> state
@@ -285,7 +276,6 @@ object AppReducer {
         // Event Screen — reducer handles only pure state transitions
         is AppIntent.Event.ScreenOpened ->
             state.copy(
-                screen = AppScreen.EventScreen(intent.profileId, intent.source),
                 event = state.event.copy(
                     isLoading    = true,
                     screenStatus = EventScreenStatus.Loading,
@@ -327,25 +317,16 @@ object AppReducer {
         is AppIntent.Event.RetryClicked          -> state
 
         is AppIntent.Event.GoHomeClicked ->
-            state.copy(
-                screen = AppScreen.Main(),
-                event = state.event.copy(autoOpenTriggered = false)
-            )
+            state.copy(event = state.event.copy(autoOpenTriggered = false))
 
         is AppIntent.Event.DismissClicked ->
             if (state.event.isBackAllowed || state.event.mode == EventMode.REPEAT)
-                state.copy(
-                    screen = AppScreen.Main(),
-                    event = state.event.copy(autoOpenTriggered = false)
-                )
+                state.copy(event = state.event.copy(autoOpenTriggered = false))
             else state  // dismiss заблокирован до завершения celebration
 
         is AppIntent.Event.BackPressed ->
             if (state.event.isBackAllowed || state.event.mode == EventMode.REPEAT)
-                state.copy(
-                    screen = AppScreen.Main(),
-                    event = state.event.copy(autoOpenTriggered = false)
-                )
+                state.copy(event = state.event.copy(autoOpenTriggered = false))
             else state  // back заблокирован во время first-time celebration
 
         // System intents — side effects only in Store

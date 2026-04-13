@@ -39,6 +39,7 @@ fun App() {
     }
 
     val state by store.state.collectAsState()
+    val currentScreen by store.navigator.current.collectAsState()
 
     var comingSoonFeature by remember { mutableStateOf<String?>(null) }
     var celebrationMilestoneId by remember { mutableStateOf<String?>(null) }
@@ -88,7 +89,7 @@ fun App() {
     }
 
     MaterialTheme {
-        when (val screen = state.screen) {
+        when (val screen = currentScreen) {
             AppScreen.OnboardingIntro ->
                 OnboardingIntroScreen(onIntent = store::dispatch)
 
@@ -99,7 +100,7 @@ fun App() {
                 OnboardingResultScreen(state = state, onIntent = store::dispatch)
 
             is AppScreen.Main ->
-                MainScaffold(state = state, onIntent = store::dispatch)
+                MainScaffold(state = state, selectedTab = screen.tab, onIntent = store::dispatch)
 
             is AppScreen.EventScreen ->
                 EventScreen(

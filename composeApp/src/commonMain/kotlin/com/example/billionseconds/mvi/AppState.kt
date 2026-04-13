@@ -1,13 +1,9 @@
 package com.example.billionseconds.mvi
 
 import com.example.billionseconds.mvi.event.EventUiState
-import com.example.billionseconds.navigation.AppScreen
 import kotlinx.datetime.Instant
 
 data class AppState(
-    // Navigation
-    val screen: AppScreen = AppScreen.OnboardingIntro,
-
     // Onboarding input
     val year: Int?           = null,
     val month: Int?          = null,

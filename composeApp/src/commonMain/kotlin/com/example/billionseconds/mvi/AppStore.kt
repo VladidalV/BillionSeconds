@@ -43,6 +43,8 @@ import com.example.billionseconds.domain.model.toEventStatus
 import com.example.billionseconds.mvi.event.EventScreenStatus
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
+import com.example.billionseconds.navigation.command.NavCommand
+import com.example.billionseconds.navigation.navigator.AppNavigator
 import com.example.billionseconds.util.AppMetaProvider
 import com.example.billionseconds.util.currentInstant
 import kotlinx.coroutines.*
@@ -68,6 +70,7 @@ class AppStore(
 
     private val timeCapsuleRepository = TimeCapsuleRepository(createTimeCapsuleStorage())
 
+    val navigator: AppNavigator
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val _state = MutableStateFlow(AppState())
@@ -90,6 +93,8 @@ class AppStore(
         // Миграция legacy birthday данных в FamilyProfile
         migrateLegacyBirthdayToFamily()
 
+        var initialScreen: AppScreen = AppScreen.OnboardingIntro
+
         if (repository.isOnboardingCompleted()) {
             val activeProfile = getActiveProfileOrFallback()
             if (activeProfile != null) {
@@ -98,7 +103,6 @@ class AppStore(
                 val result = BillionSecondsCalculator.computeAll(birthData, now)
                 val unknownTime = activeProfile.unknownBirthTime
                 _state.value = AppState(
-                    screen = AppScreen.Main(MainTab.Home),
                     year = activeProfile.birthYear,
                     month = activeProfile.birthMonth,
                     day = activeProfile.birthDay,
@@ -116,20 +120,25 @@ class AppStore(
                     family     = buildFamilyUiState(now),
                     profile    = buildProfileUiState(now)
                 )
+                initialScreen = AppScreen.Main(MainTab.Home)
                 startTick(result.milestoneInstant)
                 // Проверка event eligibility при старте приложения
                 checkEventEligibilityAndTrigger(activeProfile, now)
             }
         }
+
+        navigator = AppNavigator(initialScreen)
     }
 
     fun dispatch(intent: AppIntent) {
         _state.update { AppReducer.reduce(it, intent) }
         when (intent) {
+            is AppIntent.StartClicked               -> navigator.execute(NavCommand.Forward(AppScreen.OnboardingInput))
             is AppIntent.OnboardingCalculateClicked -> onboardingCalculate()
             is AppIntent.OnboardingContinueClicked  -> onboardingContinue()
             is AppIntent.CalculateClicked           -> mainCalculate()
             is AppIntent.ClearClicked               -> mainClear()
+            is AppIntent.TabSelected                -> navigator.execute(NavCommand.SwitchTab(intent.tab))
             is AppIntent.CountdownScreenStarted     -> onCountdownResumed()
             is AppIntent.CountdownScreenResumed     -> onCountdownResumed()
             is AppIntent.LifeStatsScreenStarted     -> onLifeStatsResumed()
@@ -149,20 +158,37 @@ class AppStore(
             is AppIntent.WriteLetterClicked         -> emitEffect(AppEffect.ShowComingSoon("write_letter"))
             is AppIntent.AddFamilyClicked           -> emitEffect(AppEffect.ShowComingSoon("add_family"))
             is AppIntent.BackClicked -> {
-                if (_state.value.screen is AppScreen.TimeCapsule) {
-                    _state.update { it.copy(screen = AppScreen.Main()) }
-                } else if (_state.value.screen is AppScreen.Main) {
-                    val profileSubScreen = _state.value.profile.subScreen
-                    if (profileSubScreen !is ProfileSubScreen.Root) {
-                        // Есть открытый sub-screen Profile — возврат на Root
-                        _state.update {
-                            it.copy(profile = it.profile.copy(
-                                subScreen = ProfileSubScreen.Root,
-                                confirmDialog = null
-                            ))
+                when (navigator.current.value) {
+                    is AppScreen.TimeCapsule -> {
+                        val sub = _state.value.timeCapsule.subScreen
+                        if (sub is TimeCapsuleSubScreen.List) {
+                            navigator.execute(NavCommand.Back)
+                        } else {
+                            _state.update { it.copy(
+                                timeCapsule = it.timeCapsule.copy(
+                                    subScreen = TimeCapsuleSubScreen.List,
+                                    formDraft = null,
+                                    openedCapsule = null
+                                )
+                            )}
                         }
-                    } else {
-                        emitEffect(AppEffect.ExitApp)
+                    }
+                    is AppScreen.Main -> {
+                        val profileSubScreen = _state.value.profile.subScreen
+                        if (profileSubScreen !is ProfileSubScreen.Root) {
+                            _state.update {
+                                it.copy(profile = it.profile.copy(
+                                    subScreen = ProfileSubScreen.Root,
+                                    confirmDialog = null
+                                ))
+                            }
+                        } else {
+                            emitEffect(AppEffect.ExitApp)
+                        }
+                    }
+                    else -> {
+                        if (navigator.canGoBack) navigator.execute(NavCommand.Back)
+                        else emitEffect(AppEffect.ExitApp)
                     }
                 }
             }
@@ -184,7 +210,10 @@ class AppStore(
             // Debug
             is AppIntent.DebugOpenEventScreen       -> onDebugOpenEventScreen()
             // Event Screen
-            is AppIntent.Event.ScreenOpened         -> onEventScreenOpened(intent.profileId, intent.source)
+            is AppIntent.Event.ScreenOpened -> {
+                navigator.execute(NavCommand.Forward(AppScreen.EventScreen(intent.profileId, intent.source)))
+                onEventScreenOpened(intent.profileId, intent.source)
+            }
             is AppIntent.Event.MarkSeenIfNeeded     -> onEventMarkSeen()
             is AppIntent.Event.MarkCelebrationShownIfNeeded -> onEventMarkCelebrationShown()
             is AppIntent.Event.CelebrationCompleted -> onEventCelebrationCompleted()
@@ -193,12 +222,17 @@ class AppStore(
             is AppIntent.Event.CreateVideoClicked   -> emitEffect(AppEffect.ShowComingSoon("create_video"))
             is AppIntent.Event.OpenMilestonesClicked -> emitEffect(AppEffect.NavigateToMilestonesFromEvent)
             is AppIntent.Event.OpenStatsClicked     -> emitEffect(AppEffect.NavigateToStatsFromEvent)
-            is AppIntent.Event.GoHomeClicked        -> emitEffect(AppEffect.NavigateToHomeFromEvent)
+            is AppIntent.Event.GoHomeClicked        -> navigator.execute(NavCommand.NewRoot(AppScreen.Main()))
             is AppIntent.Event.NextMilestoneClicked -> emitEffect(AppEffect.ShowComingSoon("next_milestone"))
             is AppIntent.Event.RetryClicked         -> onEventRetry()
             is AppIntent.Event.ProfileChanged       -> onEventProfileChanged(intent.newProfileId)
             is AppIntent.Event.BackPressed,
-            is AppIntent.Event.DismissClicked       -> Unit // reducer handles navigation
+            is AppIntent.Event.DismissClicked -> {
+                val s = _state.value
+                if (s.event.isBackAllowed || s.event.mode == EventMode.REPEAT) {
+                    navigator.execute(NavCommand.Back)
+                }
+            }
             // Time Capsule Screen
             is AppIntent.TimeCapsule.ScreenStarted         -> loadTimeCapsules()
             is AppIntent.TimeCapsule.EditClicked           -> openTimeCapsuleForEdit(intent.id)
@@ -209,7 +243,7 @@ class AppStore(
             is AppIntent.TimeCapsule.BackClicked -> {
                 val sub = _state.value.timeCapsule.subScreen
                 if (sub is TimeCapsuleSubScreen.List) {
-                    _state.update { it.copy(screen = AppScreen.Main()) }
+                    navigator.execute(NavCommand.Back)
                 }
                 // Остальные случаи (Create/Edit/Open) обрабатываются в reducer
             }
@@ -245,10 +279,10 @@ class AppStore(
                     progressPercent    = result.progressPercent,
                     isMilestoneReached = result.isMilestoneReached,
                     secondsRemaining   = result.secondsRemaining,
-                    screen             = AppScreen.OnboardingResult,
                     error              = null
                 )
             }
+            navigator.execute(NavCommand.Forward(AppScreen.OnboardingResult))
         } catch (e: Exception) {
             _state.update { it.copy(error = "Некорректная дата") }
         }
@@ -267,7 +301,6 @@ class AppStore(
         val result = BillionSecondsCalculator.computeAll(data, now)
         _state.update {
             it.copy(
-                screen         = AppScreen.Main(MainTab.Home),
                 showMainResult = true,
                 countdown    = buildCountdownUiState(result, s.unknownTime, now),
                 lifeStats    = buildLifeStatsUiState(data, result, s.unknownTime, now),
@@ -276,6 +309,7 @@ class AppStore(
                 profile      = buildProfileUiState(now)
             )
         }
+        navigator.execute(NavCommand.NewRoot(AppScreen.Main(MainTab.Home)))
         startTick(milestone)
     }
 
@@ -621,8 +655,7 @@ class AppStore(
 
         _state.update {
             it.copy(
-                screen = AppScreen.EventScreen(profile.id, EventSource.MANUAL),
-                event  = it.event.copy(
+                event = it.event.copy(
                     isLoading            = false,
                     profileId            = profile.id,
                     profileName          = profile.name,
@@ -640,6 +673,7 @@ class AppStore(
                 )
             )
         }
+        navigator.execute(NavCommand.Forward(AppScreen.EventScreen(profile.id, EventSource.MANUAL)))
         emitEffect(AppEffect.TriggerCelebrationAnimation)
     }
 
@@ -1066,6 +1100,7 @@ class AppStore(
                     familyRepository.clearAll()
                     settingsRepository.clearAll()
                     _state.value = AppState()
+                    navigator.execute(NavCommand.NewRoot(AppScreen.OnboardingIntro))
                     emitEffect(AppEffect.OnboardingReset)
                 }
             }
@@ -1107,7 +1142,7 @@ class AppStore(
     // ── Time Capsule ──────────────────────────────────────────────────────────
 
     private fun navigateToTimeCapsule() {
-        _state.update { it.copy(screen = AppScreen.TimeCapsule) }
+        navigator.execute(NavCommand.Forward(AppScreen.TimeCapsule))
     }
 
     private fun loadTimeCapsules() {
