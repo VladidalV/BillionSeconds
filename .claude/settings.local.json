@@ -61,7 +61,8 @@
       "Bash(./gradlew :app:linkDebugFrameworkIosSimulatorArm64)",
       "Bash(grep -v \"^--$\")",
       "Bash(./gradlew :app:embedAndSignAppleFrameworkForXcode)",
-      "Bash(./gradlew :app:tasks)"
+      "Bash(./gradlew :app:tasks)",
+      "Bash(grep -E \"\\\\.kt$\")"
     ]
   }
 }
