@@ -44,6 +44,18 @@ kotlin {
             implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
+            implementation(projects.core.coreDomain)
+            implementation(projects.core.coreData)
+            implementation(projects.core.coreUi)
+            implementation(projects.core.coreNavigation)
+            implementation(projects.feature.featureProfile)
+            implementation(projects.feature.featureOnboarding)
+            implementation(projects.feature.featureCountdown)
+            implementation(projects.feature.featureLifestats)
+            implementation(projects.feature.featureMilestones)
+            implementation(projects.feature.featureFamily)
+            implementation(projects.feature.featureEvent)
+            implementation(projects.feature.featureTimecapsule)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

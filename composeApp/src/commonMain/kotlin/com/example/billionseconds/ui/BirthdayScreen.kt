@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import billionseconds.composeapp.generated.resources.*
+import billionseconds.app.generated.resources.*
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.AppState
 import com.example.billionseconds.ui.components.DateInputSection

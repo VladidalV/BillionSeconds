@@ -1,6 +1,13 @@
 package com.example.billionseconds.mvi
 
-import com.example.billionseconds.mvi.event.EventUiState
+import com.example.billionseconds.ui.event.EventUiState
+import com.example.billionseconds.ui.timecapsule.TimeCapsuleUiState
+import com.example.billionseconds.ui.countdown.CountdownUiState
+import com.example.billionseconds.ui.lifestats.LifeStatsUiState
+import com.example.billionseconds.ui.family.FamilyUiState
+import com.example.billionseconds.ui.milestones.MilestonesUiState
+import com.example.billionseconds.ui.onboarding.OnboardingUiState
+import com.example.billionseconds.ui.profile.ProfileUiState
 import kotlinx.datetime.Instant
 
 data class AppState(
@@ -43,4 +50,17 @@ data class AppState(
 
     // Time Capsule screen
     val timeCapsule: TimeCapsuleUiState = TimeCapsuleUiState()
-)
+) {
+    val onboarding: OnboardingUiState get() = OnboardingUiState(
+        year = year,
+        month = month,
+        day = day,
+        hour = hour,
+        minute = minute,
+        unknownTime = unknownTime,
+        milestoneInstant = milestoneInstant,
+        progressPercent = progressPercent,
+        isMilestoneReached = isMilestoneReached,
+        error = error
+    )
+}

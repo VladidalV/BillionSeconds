@@ -40,7 +40,30 @@ import com.example.billionseconds.domain.event.model.EventMode
 import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.domain.model.MilestoneResult
 import com.example.billionseconds.domain.model.toEventStatus
-import com.example.billionseconds.mvi.event.EventScreenStatus
+import com.example.billionseconds.ui.event.EventScreenStatus
+import com.example.billionseconds.ui.timecapsule.CapsuleFormDraft
+import com.example.billionseconds.ui.timecapsule.ConditionType
+import com.example.billionseconds.ui.timecapsule.TimeCapsuleError
+import com.example.billionseconds.ui.timecapsule.TimeCapsuleSubScreen
+import com.example.billionseconds.ui.timecapsule.TimeCapsuleUiState
+import com.example.billionseconds.ui.countdown.CountdownError
+import com.example.billionseconds.ui.countdown.CountdownUiState
+import com.example.billionseconds.ui.lifestats.LifeStatsError
+import com.example.billionseconds.ui.lifestats.LifeStatsUiState
+import com.example.billionseconds.ui.lifestats.StatItem
+import com.example.billionseconds.ui.family.FamilyError
+import com.example.billionseconds.ui.family.FamilyProfileUiItem
+import com.example.billionseconds.ui.family.FamilySubScreen
+import com.example.billionseconds.ui.family.FamilyUiState
+import com.example.billionseconds.ui.family.ProfileFormDraft
+import com.example.billionseconds.ui.milestones.MilestoneUiItem
+import com.example.billionseconds.ui.milestones.MilestonesError
+import com.example.billionseconds.ui.milestones.MilestonesUiState
+import com.example.billionseconds.ui.profile.ActiveProfileSummary
+import com.example.billionseconds.ui.profile.LegalLinkType
+import com.example.billionseconds.ui.profile.ProfileConfirmDialog
+import com.example.billionseconds.ui.profile.ProfileSubScreen
+import com.example.billionseconds.ui.profile.ProfileUiState
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.navigation.command.NavCommand
@@ -114,7 +137,7 @@ class AppStore(
                     isMilestoneReached = result.isMilestoneReached,
                     secondsRemaining = result.secondsRemaining,
                     showMainResult = true,
-                    countdown  = buildCountdownUiState(result, unknownTime, now),
+                    countdown  = buildCountdownUiState(result, unknownTime, now, activeProfile.name),
                     lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
                     milestones = buildMilestonesUiState(birthData, unknownTime, now),
                     family     = buildFamilyUiState(now),
@@ -359,7 +382,7 @@ class AppStore(
         val birthData = activeProfile.toBirthdayData()
         val result = BillionSecondsCalculator.computeAll(birthData, now)
         _state.update {
-            it.copy(countdown = buildCountdownUiState(result, activeProfile.unknownBirthTime, now))
+            it.copy(countdown = buildCountdownUiState(result, activeProfile.unknownBirthTime, now, activeProfile.name))
         }
     }
 
@@ -519,7 +542,7 @@ class AppStore(
             val unknownTime = updatedActiveProfile.unknownBirthTime
             _state.update {
                 it.copy(
-                    countdown  = buildCountdownUiState(result, unknownTime, now),
+                    countdown  = buildCountdownUiState(result, unknownTime, now, updatedActiveProfile.name),
                     lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
                     milestones = buildMilestonesUiState(birthData, unknownTime, now),
                     family     = buildFamilyUiState(now).copy(
@@ -561,7 +584,7 @@ class AppStore(
             val unknownTime = newActive.unknownBirthTime
             _state.update {
                 it.copy(
-                    countdown  = buildCountdownUiState(result, unknownTime, now),
+                    countdown  = buildCountdownUiState(result, unknownTime, now, newActive.name),
                     lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
                     milestones = buildMilestonesUiState(birthData, unknownTime, now),
                     family     = buildFamilyUiState(now).copy(
@@ -591,7 +614,7 @@ class AppStore(
         val unknownTime = profile.unknownBirthTime
         _state.update {
             it.copy(
-                countdown  = buildCountdownUiState(result, unknownTime, now),
+                countdown  = buildCountdownUiState(result, unknownTime, now, profile.name),
                 lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
                 milestones = buildMilestonesUiState(birthData, unknownTime, now),
                 family     = buildFamilyUiState(now)
@@ -674,7 +697,7 @@ class AppStore(
             )
         }
         navigator.execute(NavCommand.Forward(AppScreen.EventScreen(profile.id, EventSource.MANUAL)))
-        emitEffect(AppEffect.TriggerCelebrationAnimation)
+        _state.update { it.copy(event = it.event.copy(triggerCelebration = true)) }
     }
 
     private fun onEventScreenOpened(profileId: String, source: EventSource) {
@@ -731,7 +754,7 @@ class AppStore(
         if (domain.mode == com.example.billionseconds.domain.event.model.EventMode.FIRST_TIME) {
             eventHistoryManager.markSeen(profileId, now)
             if (!domain.celebrationShown) {
-                emitEffect(AppEffect.TriggerCelebrationAnimation)
+                _state.update { it.copy(event = it.event.copy(triggerCelebration = true)) }
             } else {
                 // Celebration уже было (после process death) — back разрешён
                 _state.update { it.copy(event = it.event.copy(isBackAllowed = true)) }
@@ -815,7 +838,7 @@ class AppStore(
                     it.copy(
                         isMilestoneReached = result.isMilestoneReached,
                         secondsRemaining   = result.secondsRemaining,
-                        countdown  = buildCountdownUiState(result, unknownTime, now),
+                        countdown  = buildCountdownUiState(result, unknownTime, now, activeProfile.name),
                         lifeStats  = buildLifeStatsUiState(birthData, result, unknownTime, now),
                         milestones = if (newlyReachedId != null)
                             newMilestones.copy(celebrationAvailableId = null)
@@ -874,7 +897,8 @@ class AppStore(
     private fun buildCountdownUiState(
         result: MilestoneResult,
         unknownTime: Boolean,
-        now: Instant
+        now: Instant,
+        activeProfileName: String? = null
     ): CountdownUiState = CountdownUiState(
         isLoading           = false,
         eventStatus         = result.toEventStatus(now),
@@ -886,6 +910,7 @@ class AppStore(
         formattedMilestoneTime = CountdownFormatter.formatMilestoneTime(result.milestoneInstant),
         formattedCountdown  = CountdownFormatter.formatCountdown(result.secondsRemaining),
         formattedProgress   = CountdownFormatter.formatProgress(result.progressPercent),
+        activeProfileName   = activeProfileName,
         error               = null
     )
 

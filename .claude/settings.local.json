@@ -39,7 +39,26 @@
       "mcp__plugin_figma_figma__get_design_context",
       "mcp__plugin_figma_figma__get_metadata",
       "Bash(python3 -c ':*)",
-      "Bash(grep -n \"enum class MainTab\\\\|sealed class\\\\|data object\\\\|data class\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/navigation/*.kt)"
+      "Bash(grep -n \"enum class MainTab\\\\|sealed class\\\\|data object\\\\|data class\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/navigation/*.kt)",
+      "Bash(./gradlew :core:core-domain:build)",
+      "Bash(./gradlew :app:compileKotlinAndroid)",
+      "Bash(./gradlew :app:compileDebugKotlinAndroid)",
+      "Bash(git -C /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds show HEAD:composeApp/src/commonMain/kotlin/com/example/billionseconds/ui/BirthdayScreen.kt)",
+      "Bash(./gradlew :app:assembleDebug)",
+      "Bash(./gradlew :core:core-data:compileDebugKotlinAndroid)",
+      "Bash(./gradlew :core:core-navigation:build)",
+      "Bash(./gradlew :feature:feature-profile:compileKotlinMetadata --stacktrace)",
+      "Bash(./gradlew :app:compileKotlinMetadata)",
+      "Bash(grep -n \"AppIntent\\\\|onIntent\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/ui/onboarding/*.kt)",
+      "Bash(grep -n \"state\\\\.\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/ui/onboarding/*.kt)",
+      "Bash(grep -n \"AppIntent\\\\|AppState\\\\|onIntent\\\\|state\\\\.\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/ui/countdown/*.kt)",
+      "Bash(grep -n \"CountdownUiState\\\\|data class Countdown\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/mvi/*.kt)",
+      "Bash(grep -n \"AppIntent\\\\.\" /Users/vladimirkhafizov/StudioProjects/MyProjects/BillionSeconds/composeApp/src/commonMain/kotlin/com/example/billionseconds/ui/countdown/*.kt)",
+      "Bash(./gradlew :composeApp:assembleDebug)",
+      "Bash(ls:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(./gradlew :app:assembleDebug :app:linkDebugFrameworkIosArm64)",
+      "Bash(./gradlew :app:linkDebugFrameworkIosSimulatorArm64)"
     ]
   }
 }

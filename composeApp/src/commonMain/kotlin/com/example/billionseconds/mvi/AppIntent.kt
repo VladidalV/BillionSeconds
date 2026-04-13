@@ -3,6 +3,9 @@ package com.example.billionseconds.mvi
 import com.example.billionseconds.data.model.RelationType
 import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.navigation.MainTab
+import com.example.billionseconds.ui.profile.LegalLinkType
+import com.example.billionseconds.ui.profile.ProfileSubScreen
+import com.example.billionseconds.ui.timecapsule.ConditionType
 
 sealed class AppIntent {
 

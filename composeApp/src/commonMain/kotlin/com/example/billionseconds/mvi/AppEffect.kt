@@ -24,7 +24,6 @@ sealed class AppEffect {
     data object NavigateToStatsFromEvent     : AppEffect()
     data object NavigateToHomeFromEvent      : AppEffect()
     data object CloseEventScreen             : AppEffect()
-    data object TriggerCelebrationAnimation  : AppEffect()
     data class  ShareEventPayload(val payload: EventSharePayload) : AppEffect()
     data class  ShowEventError(val message: String) : AppEffect()
 }

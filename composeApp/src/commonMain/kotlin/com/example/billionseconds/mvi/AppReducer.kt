@@ -1,9 +1,14 @@
 package com.example.billionseconds.mvi
 
 import com.example.billionseconds.domain.event.model.EventMode
-import com.example.billionseconds.mvi.event.EventScreenStatus
+import com.example.billionseconds.ui.event.EventScreenStatus
 import com.example.billionseconds.data.model.RelationType
 import com.example.billionseconds.data.model.AppSettings
+import com.example.billionseconds.ui.family.FamilySubScreen
+import com.example.billionseconds.ui.timecapsule.CapsuleFormDraft
+import com.example.billionseconds.ui.timecapsule.TimeCapsuleSubScreen
+import com.example.billionseconds.ui.profile.ProfileSubScreen
+import com.example.billionseconds.ui.profile.ProfileConfirmDialog
 
 object AppReducer {
 
@@ -292,7 +297,7 @@ object AppReducer {
         is AppIntent.Event.ScreenResumed -> state
 
         is AppIntent.Event.CelebrationDisplayed ->
-            state.copy(event = state.event.copy(isCelebrationRunning = true))
+            state.copy(event = state.event.copy(isCelebrationRunning = true, triggerCelebration = false))
 
         is AppIntent.Event.CelebrationCompleted ->
             state.copy(event = state.event.copy(

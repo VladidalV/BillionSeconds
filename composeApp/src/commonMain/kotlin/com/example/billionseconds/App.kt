@@ -14,6 +14,9 @@ import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.AppStore
+import com.example.billionseconds.mvi.eventAdapter
+import com.example.billionseconds.mvi.onboardingAdapter
+import com.example.billionseconds.mvi.timeCapsuleAdapter
 import com.example.billionseconds.navigation.AppScreen
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.ui.event.EventScreen
@@ -74,7 +77,6 @@ fun App() {
                     store.dispatch(AppIntent.TabSelected(MainTab.Home))
                 is AppEffect.CloseEventScreen ->
                     store.dispatch(AppIntent.Event.BackPressed)
-                is AppEffect.TriggerCelebrationAnimation -> Unit // обрабатывается в EventScreen
                 is AppEffect.ShareEventPayload -> shareText(effect.payload.text)
                 is AppEffect.ShowEventError -> Unit // TODO: snackbar
             }
@@ -91,28 +93,27 @@ fun App() {
     MaterialTheme {
         when (val screen = currentScreen) {
             AppScreen.OnboardingIntro ->
-                OnboardingIntroScreen(onIntent = store::dispatch)
+                OnboardingIntroScreen(onAction = onboardingAdapter(store::dispatch))
 
             AppScreen.OnboardingInput ->
-                OnboardingInputScreen(state = state, onIntent = store::dispatch)
+                OnboardingInputScreen(uiState = state.onboarding, onAction = onboardingAdapter(store::dispatch))
 
             AppScreen.OnboardingResult ->
-                OnboardingResultScreen(state = state, onIntent = store::dispatch)
+                OnboardingResultScreen(uiState = state.onboarding, onAction = onboardingAdapter(store::dispatch))
 
             is AppScreen.Main ->
                 MainScaffold(state = state, selectedTab = screen.tab, onIntent = store::dispatch)
 
             is AppScreen.EventScreen ->
                 EventScreen(
-                    state    = state.event,
-                    effects  = store.effect,
-                    onIntent = store::dispatch
+                    uiState  = state.event,
+                    onAction = eventAdapter(store::dispatch)
                 )
 
             AppScreen.TimeCapsule ->
                 TimeCapsuleScreen(
                     uiState  = state.timeCapsule,
-                    onIntent = store::dispatch
+                    onAction = timeCapsuleAdapter(store::dispatch)
                 )
         }
     }
