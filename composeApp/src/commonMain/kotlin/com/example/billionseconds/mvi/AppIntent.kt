@@ -111,6 +111,9 @@ sealed class AppIntent {
     data object ConfirmDangerousAction  : AppIntent()
     data object DismissConfirmDialog    : AppIntent()
 
+    // Sync
+    data object SyncCompleted : AppIntent()
+
     // Debug / Testing
     data object DebugOpenEventScreen : AppIntent()
 

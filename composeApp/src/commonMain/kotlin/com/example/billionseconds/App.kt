@@ -5,11 +5,14 @@ import androidx.compose.runtime.*
 import com.example.billionseconds.data.AppSettingsRepository
 import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.FamilyProfileRepository
+import com.example.billionseconds.data.TimeCapsuleRepository
 import com.example.billionseconds.data.createAppSettingsStorage
 import com.example.billionseconds.data.createBirthdayStorage
 import com.example.billionseconds.data.createFamilyProfileStorage
+import com.example.billionseconds.data.createTimeCapsuleStorage
 import com.example.billionseconds.data.event.EventHistoryRepository
 import com.example.billionseconds.data.event.createEventHistoryStorage
+import com.example.billionseconds.network.createSyncManager
 import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppIntent
@@ -30,11 +33,24 @@ import com.example.billionseconds.ui.shared.ComingSoonSheet
 @Composable
 fun App() {
     val store = remember {
+        val birthdayRepo       = BirthdayRepository(createBirthdayStorage())
+        val familyRepo         = FamilyProfileRepository(createFamilyProfileStorage())
+        val settingsRepo       = AppSettingsRepository(createAppSettingsStorage())
+        val eventHistoryRepo   = EventHistoryRepository(createEventHistoryStorage())
+        val timeCapsuleRepo    = TimeCapsuleRepository(createTimeCapsuleStorage())
+        val syncManager = createSyncManager(
+            familyRepository       = familyRepo,
+            settingsRepository     = settingsRepo,
+            eventHistoryRepository = eventHistoryRepo,
+            timeCapsuleRepository  = timeCapsuleRepo,
+            birthdayRepository     = birthdayRepo
+        )
         AppStore(
-            repository             = BirthdayRepository(createBirthdayStorage()),
-            familyRepository       = FamilyProfileRepository(createFamilyProfileStorage()),
-            settingsRepository     = AppSettingsRepository(createAppSettingsStorage()),
-            eventHistoryRepository = EventHistoryRepository(createEventHistoryStorage())
+            repository             = birthdayRepo,
+            familyRepository       = familyRepo,
+            settingsRepository     = settingsRepo,
+            eventHistoryRepository = eventHistoryRepo,
+            syncManager            = syncManager
         )
     }
     DisposableEffect(store) {

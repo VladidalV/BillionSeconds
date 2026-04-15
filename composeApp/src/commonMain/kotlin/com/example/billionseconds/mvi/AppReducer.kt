@@ -275,6 +275,9 @@ object AppReducer {
                 isActionInProgress = false
             ))
 
+        // Sync — state rebuild happens in AppStore.onSyncCompleted(), reducer is a no-op
+        is AppIntent.SyncCompleted -> state
+
         // Debug
         is AppIntent.DebugOpenEventScreen -> state
 

@@ -85,7 +85,8 @@ class AppStore(
     private val repository: BirthdayRepository,
     private val familyRepository: FamilyProfileRepository,
     private val settingsRepository: AppSettingsRepository,
-    private val eventHistoryRepository: EventHistoryRepository
+    private val eventHistoryRepository: EventHistoryRepository,
+    private val syncManager: com.example.billionseconds.network.sync.SyncManager? = null
 ) {
     private val eventEligibilityChecker = EventEligibilityChecker(eventHistoryRepository)
     private val eventHistoryManager = EventHistoryManager(eventHistoryRepository)
@@ -151,6 +152,15 @@ class AppStore(
         }
 
         navigator = AppNavigator(initialScreen)
+
+        // Background sync — does not block UI initialisation
+        if (syncManager != null) {
+            scope.launch(Dispatchers.Default) {
+                syncManager.syncOnStart()
+                // After sync completes, refresh local state on main thread
+                dispatch(AppIntent.SyncCompleted)
+            }
+        }
     }
 
     fun dispatch(intent: AppIntent) {
@@ -230,6 +240,8 @@ class AppStore(
             is AppIntent.ApproximateLabelsToggled,
             is AppIntent.Use24HourFormatToggled     -> persistSettings()
             is AppIntent.ConfirmDangerousAction     -> onConfirmDangerousAction()
+            // Sync
+            is AppIntent.SyncCompleted              -> onSyncCompleted()
             // Debug
             is AppIntent.DebugOpenEventScreen       -> onDebugOpenEventScreen()
             // Event Screen
@@ -272,6 +284,37 @@ class AppStore(
             }
             else -> Unit
         }
+    }
+
+    // ── Sync ──────────────────────────────────────────────────────────────────
+
+    private fun onSyncCompleted() {
+        // Re-build state from local storage after server data has been applied
+        val now = currentInstant()
+        val activeProfile = getActiveProfileOrFallback() ?: return
+        val birthData = activeProfile.toBirthdayData()
+        val result = BillionSecondsCalculator.computeAll(birthData, now)
+        _state.update { current ->
+            current.copy(
+                year               = activeProfile.birthYear,
+                month              = activeProfile.birthMonth,
+                day                = activeProfile.birthDay,
+                hour               = activeProfile.birthHour,
+                minute             = activeProfile.birthMinute,
+                unknownTime        = activeProfile.unknownBirthTime,
+                milestoneInstant   = result.milestoneInstant,
+                progressPercent    = result.progressPercent,
+                isMilestoneReached = result.isMilestoneReached,
+                secondsRemaining   = result.secondsRemaining,
+                showMainResult     = true,
+                countdown  = buildCountdownUiState(result, activeProfile.unknownBirthTime, now, activeProfile.name),
+                lifeStats  = buildLifeStatsUiState(birthData, result, activeProfile.unknownBirthTime, now),
+                milestones = buildMilestonesUiState(birthData, activeProfile.unknownBirthTime, now),
+                family     = buildFamilyUiState(now),
+                profile    = buildProfileUiState(now)
+            )
+        }
+        startTick(result.milestoneInstant)
     }
 
     // ── Onboarding ────────────────────────────────────────────────────────────

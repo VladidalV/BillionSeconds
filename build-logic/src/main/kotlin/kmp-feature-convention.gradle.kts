@@ -36,6 +36,14 @@ kotlin {
     wasmJs { browser() }
 
     sourceSets {
+        val jsAndWasmSharedMain by creating { dependsOn(commonMain.get()) }
+        jsMain.get().dependsOn(jsAndWasmSharedMain)
+        wasmJsMain.get().dependsOn(jsAndWasmSharedMain)
+
+        val iosMain by creating { dependsOn(commonMain.get()) }
+        iosArm64Main.get().dependsOn(iosMain)
+        iosSimulatorArm64Main.get().dependsOn(iosMain)
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)

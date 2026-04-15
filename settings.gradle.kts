@@ -38,6 +38,7 @@ project(":app").projectDir = file("composeApp")
 // Core modules
 include(":core:core-domain")
 include(":core:core-data")
+include(":core:core-network")
 include(":core:core-ui")
 include(":core:core-navigation")
 

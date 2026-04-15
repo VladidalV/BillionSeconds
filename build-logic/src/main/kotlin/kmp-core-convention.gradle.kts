@@ -32,6 +32,18 @@ kotlin {
     wasmJs { browser() }
 
     sourceSets {
+        // jsAndWasmSharedMain — стандартное KMP-имя для кода, общего для JS и WASM JS.
+        // IDE ассоциирует этот сет с browser-таргетами → kotlinx.browser резолвится корректно.
+        val jsAndWasmSharedMain by creating { dependsOn(commonMain.get()) }
+        jsMain.get().dependsOn(jsAndWasmSharedMain)
+        wasmJsMain.get().dependsOn(jsAndWasmSharedMain)
+
+        // При ручной настройке intermediate source sets дефолтная иерархия KMP отключается,
+        // поэтому iosMain нужно явно объявить как промежуточный сет для iOS таргетов.
+        val iosMain by creating { dependsOn(commonMain.get()) }
+        iosArm64Main.get().dependsOn(iosMain)
+        iosSimulatorArm64Main.get().dependsOn(iosMain)
+
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
         }

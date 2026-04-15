@@ -46,6 +46,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core.coreDomain)
             implementation(projects.core.coreData)
+            implementation(projects.core.coreNetwork)
             implementation(projects.core.coreUi)
             implementation(projects.core.coreNavigation)
             implementation(projects.feature.featureProfile)
