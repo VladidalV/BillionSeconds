@@ -1,6 +1,5 @@
 package com.example.billionseconds.mvi
 
-import com.example.billionseconds.navigation.AppScreen
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -13,8 +12,10 @@ class AppReducerTest {
 
     @Test
     fun startClickedNavigatesToOnboardingInput() {
+        // Navigation is a side-effect handled in AppStore, not the reducer.
+        // The reducer's only job for StartClicked is to clear the error.
         val result = AppReducer.reduce(initial, AppIntent.StartClicked)
-        assertEquals(AppScreen.OnboardingInput, result.screen)
+        assertEquals(initial.copy(error = null), result)
     }
 
     @Test

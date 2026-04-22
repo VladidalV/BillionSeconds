@@ -68,7 +68,10 @@
       "Bash(./gradlew :core:core-network:compileDebugKotlinAndroid)",
       "Bash(./gradlew :app:compileKotlinIosSimulatorArm64)",
       "Bash(./gradlew projects *)",
-      "Bash(./gradlew :core:core-network:compileKotlinIosSimulatorArm64)"
+      "Bash(./gradlew :core:core-network:compileKotlinIosSimulatorArm64)",
+      "Bash(./gradlew :app:compileTestKotlinJvm)",
+      "Bash(./gradlew :app:compileTestKotlinAndroid)",
+      "Bash(./gradlew :app:compileTestKotlinIosSimulatorArm64)"
     ]
   }
 }
