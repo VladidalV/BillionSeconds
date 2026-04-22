@@ -16,7 +16,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
-fun createHttpClient(tokenManager: TokenManager): HttpClient {
+fun createHttpClient(tokenManager: TokenManager, onSessionExpired: () -> Unit = {}): HttpClient {
     return HttpClient {
         install(ContentNegotiation) {
             json(Json {
@@ -71,6 +71,7 @@ fun createHttpClient(tokenManager: TokenManager): HttpClient {
                         BearerTokens(newTokens.accessToken, newTokens.refreshToken)
                     } else {
                         tokenManager.clearTokens()
+                        onSessionExpired()
                         null
                     }
                 }

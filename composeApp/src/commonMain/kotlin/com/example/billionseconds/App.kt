@@ -1,7 +1,17 @@
 package com.example.billionseconds
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import com.example.billionseconds.data.AppSettingsRepository
 import com.example.billionseconds.data.BirthdayRepository
 import com.example.billionseconds.data.FamilyProfileRepository
@@ -12,11 +22,13 @@ import com.example.billionseconds.data.createFamilyProfileStorage
 import com.example.billionseconds.data.createTimeCapsuleStorage
 import com.example.billionseconds.data.event.EventHistoryRepository
 import com.example.billionseconds.data.event.createEventHistoryStorage
-import com.example.billionseconds.network.createSyncManager
+import com.example.billionseconds.network.createNetworkComponents
+import com.example.billionseconds.ui.auth.AuthEntryScreen
 import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.mvi.AppEffect
 import com.example.billionseconds.mvi.AppIntent
 import com.example.billionseconds.mvi.AppStore
+import com.example.billionseconds.mvi.authAdapter
 import com.example.billionseconds.mvi.eventAdapter
 import com.example.billionseconds.mvi.onboardingAdapter
 import com.example.billionseconds.mvi.timeCapsuleAdapter
@@ -33,24 +45,25 @@ import com.example.billionseconds.ui.shared.ComingSoonSheet
 @Composable
 fun App() {
     val store = remember {
-        val birthdayRepo       = BirthdayRepository(createBirthdayStorage())
-        val familyRepo         = FamilyProfileRepository(createFamilyProfileStorage())
-        val settingsRepo       = AppSettingsRepository(createAppSettingsStorage())
-        val eventHistoryRepo   = EventHistoryRepository(createEventHistoryStorage())
-        val timeCapsuleRepo    = TimeCapsuleRepository(createTimeCapsuleStorage())
-        val syncManager = createSyncManager(
+        val birthdayRepo     = BirthdayRepository(createBirthdayStorage())
+        val familyRepo       = FamilyProfileRepository(createFamilyProfileStorage())
+        val settingsRepo     = AppSettingsRepository(createAppSettingsStorage())
+        val eventHistoryRepo = EventHistoryRepository(createEventHistoryStorage())
+        val timeCapsuleRepo  = TimeCapsuleRepository(createTimeCapsuleStorage())
+        val network = createNetworkComponents(
             familyRepository       = familyRepo,
             settingsRepository     = settingsRepo,
             eventHistoryRepository = eventHistoryRepo,
             timeCapsuleRepository  = timeCapsuleRepo,
-            birthdayRepository     = birthdayRepo
+            birthdayRepository     = birthdayRepo,
         )
         AppStore(
             repository             = birthdayRepo,
             familyRepository       = familyRepo,
             settingsRepository     = settingsRepo,
             eventHistoryRepository = eventHistoryRepo,
-            syncManager            = syncManager
+            syncManager            = network.syncManager,
+            authManager            = network.authManager,
         )
     }
     DisposableEffect(store) {
@@ -62,6 +75,7 @@ fun App() {
 
     var comingSoonFeature by remember { mutableStateOf<String?>(null) }
     var celebrationMilestoneId by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Обработка одноразовых эффектов
     LaunchedEffect(store) {
@@ -95,6 +109,13 @@ fun App() {
                     store.dispatch(AppIntent.Event.BackPressed)
                 is AppEffect.ShareEventPayload -> shareText(effect.payload.text)
                 is AppEffect.ShowEventError -> Unit // TODO: snackbar
+                // Auth
+                is AppEffect.LaunchGoogleSignIn      -> onLaunchGoogleSignIn(store::dispatch)
+                is AppEffect.LaunchAppleSignIn       -> onLaunchAppleSignIn(store::dispatch)
+                is AppEffect.AuthSuccess             -> snackbarHostState.showSnackbar("Добро пожаловать!")
+                is AppEffect.DismissAuthScreen       -> Unit // навигация уже выполнена в AppStore
+                is AppEffect.ShowLogoutConfirmDialog -> Unit // handled in ProfileRootContent via confirmDialog state
+                is AppEffect.SessionExpiredBanner    -> snackbarHostState.showSnackbar("Сессия истекла. Войдите снова.")
             }
         }
     }
@@ -107,33 +128,62 @@ fun App() {
     }
 
     MaterialTheme {
-        when (val screen = currentScreen) {
-            AppScreen.OnboardingIntro ->
-                OnboardingIntroScreen(onAction = onboardingAdapter(store::dispatch))
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val screen = currentScreen) {
+                AppScreen.OnboardingIntro ->
+                    OnboardingIntroScreen(onAction = onboardingAdapter(store::dispatch))
 
-            AppScreen.OnboardingInput ->
-                OnboardingInputScreen(uiState = state.onboarding, onAction = onboardingAdapter(store::dispatch))
+                AppScreen.OnboardingInput ->
+                    OnboardingInputScreen(uiState = state.onboarding, onAction = onboardingAdapter(store::dispatch))
 
-            AppScreen.OnboardingResult ->
-                OnboardingResultScreen(uiState = state.onboarding, onAction = onboardingAdapter(store::dispatch))
+                AppScreen.OnboardingResult ->
+                    OnboardingResultScreen(uiState = state.onboarding, onAction = onboardingAdapter(store::dispatch))
 
-            is AppScreen.Main ->
-                MainScaffold(state = state, selectedTab = screen.tab, onIntent = store::dispatch)
+                is AppScreen.Main ->
+                    MainScaffold(state = state, selectedTab = screen.tab, onIntent = store::dispatch)
 
-            is AppScreen.EventScreen ->
-                EventScreen(
-                    uiState  = state.event,
-                    onAction = eventAdapter(store::dispatch)
-                )
+                is AppScreen.EventScreen ->
+                    EventScreen(
+                        uiState  = state.event,
+                        onAction = eventAdapter(store::dispatch)
+                    )
 
-            AppScreen.TimeCapsule ->
-                TimeCapsuleScreen(
-                    uiState  = state.timeCapsule,
-                    onAction = timeCapsuleAdapter(store::dispatch)
-                )
+                AppScreen.TimeCapsule ->
+                    TimeCapsuleScreen(
+                        uiState  = state.timeCapsule,
+                        onAction = timeCapsuleAdapter(store::dispatch)
+                    )
+
+                is AppScreen.AuthEntry ->
+                    AuthEntryScreen(
+                        uiState  = state.auth,
+                        onAction = authAdapter(store::dispatch),
+                    )
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 80.dp),
+                snackbar = { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = androidx.compose.ui.graphics.Color(0xFF2C2C3A),
+                        contentColor = androidx.compose.ui.graphics.Color.White,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                }
+            )
         }
     }
 }
 
 expect fun shareText(text: String)
 expect fun openUrl(url: String)
+
+/** Платформенный код запускает Google Sign-In и диспатчит GoogleTokenReceived или SignInFailed. */
+expect fun onLaunchGoogleSignIn(dispatch: (com.example.billionseconds.mvi.AppIntent) -> Unit)
+
+/** Платформенный код запускает Apple Sign-In и диспатчит AppleTokenReceived или SignInFailed. */
+expect fun onLaunchAppleSignIn(dispatch: (com.example.billionseconds.mvi.AppIntent) -> Unit)

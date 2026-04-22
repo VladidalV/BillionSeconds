@@ -9,10 +9,16 @@ import com.example.billionseconds.data.AppContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AppContext.init(applicationContext)
+        ActivityHolder.set(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             App()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ActivityHolder.clear()
     }
 }

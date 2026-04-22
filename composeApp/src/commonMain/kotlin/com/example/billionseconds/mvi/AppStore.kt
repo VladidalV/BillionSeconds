@@ -6,6 +6,9 @@ import com.example.billionseconds.data.FamilyProfileRepository
 import com.example.billionseconds.data.TimeCapsuleRepository
 import com.example.billionseconds.data.createTimeCapsuleStorage
 import com.example.billionseconds.data.event.EventHistoryRepository
+import com.example.billionseconds.domain.auth.AuthSource
+import com.example.billionseconds.network.auth.AuthManager
+import com.example.billionseconds.ui.auth.AuthUiState
 import com.example.billionseconds.domain.CapsuleListGrouper
 import com.example.billionseconds.domain.CapsuleStatus
 import com.example.billionseconds.domain.CapsuleUiMapper
@@ -86,7 +89,8 @@ class AppStore(
     private val familyRepository: FamilyProfileRepository,
     private val settingsRepository: AppSettingsRepository,
     private val eventHistoryRepository: EventHistoryRepository,
-    private val syncManager: com.example.billionseconds.network.sync.SyncManager? = null
+    private val syncManager: com.example.billionseconds.network.sync.SyncManager? = null,
+    private val authManager: AuthManager? = null,
 ) {
     private val eventEligibilityChecker = EventEligibilityChecker(eventHistoryRepository)
     private val eventHistoryManager = EventHistoryManager(eventHistoryRepository)
@@ -159,6 +163,19 @@ class AppStore(
                 syncManager.syncOnStart()
                 // After sync completes, refresh local state on main thread
                 dispatch(AppIntent.SyncCompleted)
+            }
+        }
+
+        // Observe auth state changes to react to session expiry
+        if (authManager != null) {
+            scope.launch {
+                authManager.authState.collect { state ->
+                    if (state is com.example.billionseconds.domain.auth.AuthState.Error &&
+                        state.type is com.example.billionseconds.domain.auth.AuthErrorType.SessionExpired
+                    ) {
+                        dispatch(AppIntent.Auth.SessionExpired)
+                    }
+                }
             }
         }
     }
@@ -242,6 +259,18 @@ class AppStore(
             is AppIntent.ConfirmDangerousAction     -> onConfirmDangerousAction()
             // Sync
             is AppIntent.SyncCompleted              -> onSyncCompleted()
+            // Auth
+            is AppIntent.Auth.ScreenOpened          -> onAuthScreenOpened(intent.source)
+            is AppIntent.Auth.SignInWithGoogleClicked -> emitEffect(AppEffect.LaunchGoogleSignIn)
+            is AppIntent.Auth.SignInWithAppleClicked  -> emitEffect(AppEffect.LaunchAppleSignIn)
+            is AppIntent.Auth.ContinueAsGuestClicked  -> onAuthDismissed()
+            is AppIntent.Auth.GoogleTokenReceived     -> onGoogleTokenReceived(intent.idToken)
+            is AppIntent.Auth.AppleTokenReceived      -> onAppleTokenReceived(intent.identityToken, intent.name)
+            is AppIntent.Auth.SignInFailed            -> onAuthFailed(intent.error)
+            is AppIntent.Auth.LogoutClicked           -> Unit // reducer sets confirmDialog = SignOut
+            is AppIntent.Auth.LogoutConfirmed         -> onLogoutConfirmed()
+            is AppIntent.Auth.DismissError            -> _state.update { it.copy(auth = it.auth.copy(error = null)) }
+            is AppIntent.Auth.SessionExpired          -> onSessionExpired()
             // Debug
             is AppIntent.DebugOpenEventScreen       -> onDebugOpenEventScreen()
             // Event Screen
@@ -1160,6 +1189,10 @@ class AppStore(
         val dialog = _state.value.profile.confirmDialog ?: return
         scope.launch {
             when (dialog) {
+                ProfileConfirmDialog.SignOut -> {
+                    _state.update { it.copy(profile = it.profile.copy(confirmDialog = null, isActionInProgress = false)) }
+                    dispatch(AppIntent.Auth.LogoutConfirmed)
+                }
                 ProfileConfirmDialog.ResetOnboarding,
                 ProfileConfirmDialog.ClearAllData -> {
                     tickJob?.cancel()
@@ -1197,9 +1230,113 @@ class AppStore(
             subScreen            = _state.value.profile.subScreen,
             confirmDialog        = _state.value.profile.confirmDialog,
             isActionInProgress   = _state.value.profile.isActionInProgress,
-            error                = null
+            error                = null,
+            authState            = authManager?.authState?.value
+                                    ?: com.example.billionseconds.domain.auth.AuthState.Unauthenticated,
         )
     }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+
+    private fun onAuthScreenOpened(source: AuthSource) {
+        _state.update { it.copy(auth = AuthUiState(source = source)) }
+        navigator.execute(NavCommand.Forward(AppScreen.AuthEntry(source)))
+    }
+
+    private fun onAuthDismissed() {
+        if (navigator.canGoBack) navigator.execute(NavCommand.Back)
+        emitEffect(AppEffect.DismissAuthScreen)
+    }
+
+    private fun onGoogleTokenReceived(idToken: String) {
+        if (authManager == null) { onAuthDismissed(); return }
+        _state.update { it.copy(auth = it.auth.copy(isGoogleLoading = true, error = null)) }
+        val source = _state.value.auth.source
+        scope.launch {
+            authManager.signInWithGoogle(idToken)
+                .onSuccess {
+                    _state.update { it.copy(auth = it.auth.copy(isGoogleLoading = false)) }
+                    onAuthSuccess(source)
+                }
+                .onFailure {
+                    val errorState = authManager.authState.value
+                    val errorType = (errorState as? com.example.billionseconds.domain.auth.AuthState.Error)?.type
+                        ?: com.example.billionseconds.domain.auth.AuthErrorType.Unknown("sign_in_failed")
+                    _state.update { it.copy(auth = it.auth.copy(isGoogleLoading = false, error = errorType)) }
+                }
+        }
+    }
+
+    private fun onAppleTokenReceived(identityToken: String, name: String?) {
+        if (authManager == null) { onAuthDismissed(); return }
+        _state.update { it.copy(auth = it.auth.copy(isAppleLoading = true, error = null)) }
+        val source = _state.value.auth.source
+        scope.launch {
+            authManager.signInWithApple(identityToken, name)
+                .onSuccess {
+                    _state.update { it.copy(auth = it.auth.copy(isAppleLoading = false)) }
+                    onAuthSuccess(source)
+                }
+                .onFailure {
+                    val errorState = authManager.authState.value
+                    val errorType = (errorState as? com.example.billionseconds.domain.auth.AuthState.Error)?.type
+                        ?: com.example.billionseconds.domain.auth.AuthErrorType.Unknown("sign_in_failed")
+                    _state.update { it.copy(auth = it.auth.copy(isAppleLoading = false, error = errorType)) }
+                }
+        }
+    }
+
+    private fun onAuthSuccess(source: AuthSource) {
+        // Dismiss auth screen
+        if (navigator.canGoBack) navigator.execute(NavCommand.Back)
+        emitEffect(AppEffect.DismissAuthScreen)
+
+        // Refresh profile so AuthAccountSection shows the signed-in user immediately
+        _state.update { it.copy(profile = buildProfileUiState(currentInstant())) }
+
+        // Source-specific post-auth actions
+        when (source) {
+            AuthSource.SYNC,
+            AuthSource.BACKUP,
+            AuthSource.CLOUD_FEATURE -> {
+                if (syncManager != null) {
+                    scope.launch(Dispatchers.Default) {
+                        syncManager.syncOnStart()
+                        dispatch(AppIntent.SyncCompleted)
+                    }
+                }
+            }
+            AuthSource.PROFILE,
+            AuthSource.PREMIUM -> Unit
+        }
+
+        emitEffect(AppEffect.AuthSuccess)
+    }
+
+    private fun onAuthFailed(error: com.example.billionseconds.domain.auth.AuthErrorType) {
+        _state.update {
+            it.copy(auth = it.auth.copy(isGoogleLoading = false, isAppleLoading = false, error = error))
+        }
+    }
+
+    private fun onLogoutConfirmed() {
+        if (authManager == null) return
+        scope.launch {
+            authManager.signOut()
+            // Refresh profile so AuthAccountSection shows Unauthenticated state immediately
+            _state.update { it.copy(profile = buildProfileUiState(currentInstant())) }
+        }
+    }
+
+    private fun onSessionExpired() {
+        // Refresh profile — authManager.authState is now Error(SessionExpired) → isSignedIn = false
+        _state.update { it.copy(profile = buildProfileUiState(currentInstant())) }
+        // Close auth screen if it's open (e.g. user was re-authenticating)
+        if (navigator.canGoBack) navigator.execute(NavCommand.Back)
+        emitEffect(AppEffect.SessionExpiredBanner)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     private fun emitEffect(effect: AppEffect) {
         scope.launch { _effect.emit(effect) }

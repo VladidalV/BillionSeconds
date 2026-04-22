@@ -1,16 +1,18 @@
 package com.example.billionseconds.ui.profile
 
 import com.example.billionseconds.data.model.AppSettings
+import com.example.billionseconds.domain.auth.AuthState
 
 data class ProfileUiState(
-    val isLoading: Boolean                      = true,
+    val isLoading: Boolean                       = true,
     val activeProfileSummary: ActiveProfileSummary? = null,
-    val settings: AppSettings                  = AppSettings(),
-    val appVersion: String                     = "",
-    val subScreen: ProfileSubScreen            = ProfileSubScreen.Root,
-    val confirmDialog: ProfileConfirmDialog?   = null,
-    val isActionInProgress: Boolean            = false,
-    val error: ProfileError?                   = null
+    val settings: AppSettings                   = AppSettings(),
+    val appVersion: String                       = "",
+    val subScreen: ProfileSubScreen              = ProfileSubScreen.Root,
+    val confirmDialog: ProfileConfirmDialog?     = null,
+    val isActionInProgress: Boolean              = false,
+    val error: ProfileError?                     = null,
+    val authState: AuthState                     = AuthState.Unauthenticated,
 )
 
 data class ActiveProfileSummary(
@@ -33,6 +35,7 @@ sealed class ProfileSubScreen {
 sealed class ProfileConfirmDialog {
     data object ResetOnboarding : ProfileConfirmDialog()
     data object ClearAllData    : ProfileConfirmDialog()
+    data object SignOut         : ProfileConfirmDialog()
 }
 
 sealed class ProfileError {

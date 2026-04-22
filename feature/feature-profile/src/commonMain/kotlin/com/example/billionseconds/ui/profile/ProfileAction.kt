@@ -26,4 +26,7 @@ sealed class ProfileAction {
     data object DismissConfirmDialog : ProfileAction()
 
     data object DebugOpenEventScreen : ProfileAction()
+
+    data object SignInClicked  : ProfileAction()
+    data object SignOutClicked : ProfileAction()
 }

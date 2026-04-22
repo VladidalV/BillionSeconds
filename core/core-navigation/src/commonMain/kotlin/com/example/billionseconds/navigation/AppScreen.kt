@@ -1,5 +1,6 @@
 package com.example.billionseconds.navigation
 
+import com.example.billionseconds.domain.auth.AuthSource
 import com.example.billionseconds.domain.event.model.EventSource
 
 sealed class AppScreen {
@@ -12,4 +13,7 @@ sealed class AppScreen {
         val source: EventSource = EventSource.MANUAL
     ) : AppScreen()
     data object TimeCapsule : AppScreen()
+
+    /** Экран авторизации — открывается поверх любого контента. */
+    data class AuthEntry(val source: AuthSource = AuthSource.PROFILE) : AppScreen()
 }

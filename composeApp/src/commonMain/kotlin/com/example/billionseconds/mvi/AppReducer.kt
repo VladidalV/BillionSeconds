@@ -449,6 +449,29 @@ object AppReducer {
                 subScreen = TimeCapsuleSubScreen.List,
                 formDraft = null
             ))
+
+        // Auth — state mutations handled in AppStore; reducer returns state unchanged
+        // (loading/error updates are done directly via _state.update in AppStore)
+        is AppIntent.Auth.LogoutClicked ->
+            state.copy(profile = state.profile.copy(
+                confirmDialog = ProfileConfirmDialog.SignOut
+            ))
+
+        is AppIntent.Auth.SessionExpired ->
+            state.copy(profile = state.profile.copy(
+                confirmDialog = null,
+                isActionInProgress = false
+            ))
+
+        is AppIntent.Auth.ScreenOpened,
+        is AppIntent.Auth.SignInWithGoogleClicked,
+        is AppIntent.Auth.SignInWithAppleClicked,
+        is AppIntent.Auth.ContinueAsGuestClicked,
+        is AppIntent.Auth.GoogleTokenReceived,
+        is AppIntent.Auth.AppleTokenReceived,
+        is AppIntent.Auth.SignInFailed,
+        is AppIntent.Auth.LogoutConfirmed,
+        is AppIntent.Auth.DismissError -> state
     }
 }
 

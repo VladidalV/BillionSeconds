@@ -1,5 +1,7 @@
 package com.example.billionseconds.mvi
 
+import com.example.billionseconds.domain.auth.AuthSource
+import com.example.billionseconds.ui.auth.AuthUiState
 import com.example.billionseconds.ui.event.EventUiState
 import com.example.billionseconds.ui.timecapsule.TimeCapsuleUiState
 import com.example.billionseconds.ui.countdown.CountdownUiState
@@ -49,7 +51,10 @@ data class AppState(
     val event: EventUiState = EventUiState(),
 
     // Time Capsule screen
-    val timeCapsule: TimeCapsuleUiState = TimeCapsuleUiState()
+    val timeCapsule: TimeCapsuleUiState = TimeCapsuleUiState(),
+
+    // Auth screen
+    val auth: AuthUiState = AuthUiState(),
 ) {
     val onboarding: OnboardingUiState get() = OnboardingUiState(
         year = year,

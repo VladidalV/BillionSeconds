@@ -7,10 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.billionseconds.domain.auth.AuthState
+import com.example.billionseconds.domain.auth.isSignedIn
 import com.example.billionseconds.ui.theme.AppColors
 import com.example.billionseconds.ui.theme.AppConstants.bottomPadding
 
@@ -30,6 +36,13 @@ fun ProfileRootContent(
     onAction: (ProfileAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (uiState.confirmDialog == ProfileConfirmDialog.SignOut) {
+        SignOutConfirmDialog(
+            onConfirm = { onAction(ProfileAction.ConfirmDangerousAction) },
+            onDismiss = { onAction(ProfileAction.DismissConfirmDialog) }
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -46,6 +59,15 @@ fun ProfileRootContent(
             item {
                 ProfileHeroSection(
                     summary = uiState.activeProfileSummary,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+            }
+
+            item {
+                AuthAccountSection(
+                    authState = uiState.authState,
+                    onSignInClick  = { onAction(ProfileAction.SignInClicked) },
+                    onSignOutClick = { onAction(ProfileAction.SignOutClicked) },
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
             }
@@ -604,5 +626,127 @@ internal fun ToggleRow(
                 uncheckedBorderColor = Color.Transparent
             )
         )
+    }
+}
+
+// ── Sign-Out Confirm Dialog ───────────────────────────────────────────────────
+
+@Composable
+private fun SignOutConfirmDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AppColors.cardDark,
+        titleContentColor = AppColors.textHeading,
+        textContentColor = AppColors.textBody,
+        title = {
+            Text(
+                text = "Выйти из аккаунта?",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 17.sp
+            )
+        },
+        text = {
+            Text(
+                text = "Данные на устройстве сохранятся. Синхронизация с облаком будет остановлена.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = "Выйти",
+                    color = Color(0xFFFF6B6B),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Отмена",
+                    color = AppColors.textBody
+                )
+            }
+        }
+    )
+}
+
+// ── Auth Account Section ──────────────────────────────────────────────────────
+
+@Composable
+private fun AuthAccountSection(
+    authState: AuthState,
+    onSignInClick: () -> Unit,
+    onSignOutClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.cardMid)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (authState) {
+            is AuthState.Authenticated -> {
+                Text(
+                    text = "Аккаунт",
+                    color = AppColors.textHeading,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = authState.user.email
+                        ?: authState.user.displayName
+                        ?: "Подключён через ${authState.user.provider.name.lowercase()}",
+                    color = AppColors.textBody,
+                    fontSize = 13.sp,
+                )
+                TextButton(
+                    onClick = onSignOutClick,
+                    contentPadding = PaddingValues(0.dp),
+                ) {
+                    Text(
+                        text = "Выйти из аккаунта",
+                        color = Color(0xFFFF6B6B),
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+            else -> {
+                Text(
+                    text = "Сохрани данные в облаке",
+                    color = AppColors.textHeading,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Войди в аккаунт для синхронизации\nи восстановления данных",
+                    color = AppColors.textBody,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
+                Button(
+                    onClick = onSignInClick,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.purpleAccent,
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Text(
+                        text = "Войти",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
     }
 }

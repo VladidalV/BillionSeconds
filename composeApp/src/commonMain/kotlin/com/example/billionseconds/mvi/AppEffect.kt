@@ -26,4 +26,14 @@ sealed class AppEffect {
     data object CloseEventScreen             : AppEffect()
     data class  ShareEventPayload(val payload: EventSharePayload) : AppEffect()
     data class  ShowEventError(val message: String) : AppEffect()
+
+    // Auth
+    /** Платформенный код должен запустить Google Sign-In SDK и вернуть токен через AppIntent.Auth.GoogleTokenReceived. */
+    data object LaunchGoogleSignIn  : AppEffect()
+    /** Платформенный код должен запустить Apple Sign-In и вернуть токен через AppIntent.Auth.AppleTokenReceived. */
+    data object LaunchAppleSignIn   : AppEffect()
+    data object AuthSuccess             : AppEffect()
+    data object DismissAuthScreen       : AppEffect()
+    data object ShowLogoutConfirmDialog : AppEffect()
+    data object SessionExpiredBanner    : AppEffect()
 }

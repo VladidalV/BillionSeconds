@@ -23,5 +23,8 @@ fun profileAdapter(dispatch: (AppIntent) -> Unit): (ProfileAction) -> Unit = { a
         ProfileAction.ConfirmDangerousAction     -> dispatch(AppIntent.ConfirmDangerousAction)
         ProfileAction.DismissConfirmDialog       -> dispatch(AppIntent.DismissConfirmDialog)
         ProfileAction.DebugOpenEventScreen       -> dispatch(AppIntent.DebugOpenEventScreen)
+        ProfileAction.SignInClicked              -> dispatch(AppIntent.Auth.ScreenOpened(
+            com.example.billionseconds.domain.auth.AuthSource.PROFILE))
+        ProfileAction.SignOutClicked             -> dispatch(AppIntent.Auth.LogoutClicked)
     }
 }

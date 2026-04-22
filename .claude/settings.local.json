@@ -62,7 +62,13 @@
       "Bash(grep -v \"^--$\")",
       "Bash(./gradlew :app:embedAndSignAppleFrameworkForXcode)",
       "Bash(./gradlew :app:tasks)",
-      "Bash(grep -E \"\\\\.kt$\")"
+      "Bash(grep -E \"\\\\.kt$\")",
+      "Bash(./gradlew :feature:feature-auth:compileKotlinAndroid)",
+      "Bash(./gradlew :feature:feature-auth:compileDebugKotlinAndroid)",
+      "Bash(./gradlew :core:core-network:compileDebugKotlinAndroid)",
+      "Bash(./gradlew :app:compileKotlinIosSimulatorArm64)",
+      "Bash(./gradlew projects *)",
+      "Bash(./gradlew :core:core-network:compileKotlinIosSimulatorArm64)"
     ]
   }
 }

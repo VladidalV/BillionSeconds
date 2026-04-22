@@ -1,6 +1,8 @@
 package com.example.billionseconds.mvi
 
 import com.example.billionseconds.data.model.RelationType
+import com.example.billionseconds.domain.auth.AuthErrorType
+import com.example.billionseconds.domain.auth.AuthSource
 import com.example.billionseconds.domain.event.model.EventSource
 import com.example.billionseconds.navigation.MainTab
 import com.example.billionseconds.ui.profile.LegalLinkType
@@ -141,6 +143,23 @@ sealed class AppIntent {
         data object FormSaveDraftClicked : TimeCapsule()
         data object FormCancelClicked : TimeCapsule()
         data object DiscardDraftConfirmed : TimeCapsule()
+    }
+
+    // Auth Screen
+    sealed class Auth : AppIntent() {
+        data class ScreenOpened(val source: AuthSource) : Auth()
+        data object SignInWithGoogleClicked : Auth()
+        data object SignInWithAppleClicked : Auth()
+        data object ContinueAsGuestClicked : Auth()
+        /** Токен Google получен из платформенного SDK — передаём в AppStore для авторизации. */
+        data class GoogleTokenReceived(val idToken: String) : Auth()
+        /** Токен Apple получен из платформенного SDK. */
+        data class AppleTokenReceived(val identityToken: String, val name: String?) : Auth()
+        data class SignInFailed(val error: AuthErrorType) : Auth()
+        data object LogoutClicked : Auth()
+        data object LogoutConfirmed : Auth()
+        data object DismissError : Auth()
+        data object SessionExpired : Auth()
     }
 
     // Event Screen

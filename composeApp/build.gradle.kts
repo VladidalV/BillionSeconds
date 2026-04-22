@@ -42,6 +42,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services.auth)
+            implementation(libs.google.identity.googleid)
         }
         commonMain.dependencies {
             implementation(projects.core.coreDomain)
@@ -57,6 +60,7 @@ kotlin {
             implementation(projects.feature.featureFamily)
             implementation(projects.feature.featureEvent)
             implementation(projects.feature.featureTimecapsule)
+            implementation(projects.feature.featureAuth)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

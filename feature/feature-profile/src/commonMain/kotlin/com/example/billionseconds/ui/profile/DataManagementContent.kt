@@ -104,6 +104,7 @@ fun DataManagementContent(
                 ProfileConfirmDialog.ClearAllData ->
                     "Удалить все данные?" to
                     "Все профили, настройки и локальные данные будут удалены навсегда. Это действие необратимо."
+                ProfileConfirmDialog.SignOut -> return@let
             }
             AlertDialog(
                 onDismissRequest = { if (!uiState.isActionInProgress) onAction(ProfileAction.DismissConfirmDialog) },

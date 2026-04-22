@@ -30,7 +30,8 @@ class SyncManager(
     private val settingsRepository: AppSettingsRepository,
     private val eventHistoryRepository: EventHistoryRepository,
     private val timeCapsuleRepository: TimeCapsuleRepository,
-    private val birthdayRepository: BirthdayRepository
+    private val birthdayRepository: BirthdayRepository,
+    private val onGuestStateReady: ((userId: String) -> Unit)? = null,
 ) {
     private val _status = MutableStateFlow(SyncStatus.IDLE)
     val status: StateFlow<SyncStatus> = _status.asStateFlow()
@@ -58,6 +59,7 @@ class SyncManager(
         if (tokenManager.isAuthenticated()) return
         val response = authApi.loginAnonymous(AnonymousAuthRequest(tokenManager.getDeviceId()))
         tokenManager.saveTokens(response)
+        onGuestStateReady?.invoke(response.userId)
     }
 
     private suspend fun migrateLocalData() {
