@@ -9,6 +9,8 @@ import com.example.billionseconds.network.model.AppleAuthRequest
 import com.example.billionseconds.network.model.GoogleAuthRequest
 import com.example.billionseconds.network.model.MergeAccountRequest
 import com.example.billionseconds.network.token.TokenManager
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +33,7 @@ class AuthManager(
     suspend fun signInWithGoogle(idToken: String): Result<AuthState> = runCatching {
         val anonymousToken = tokenManager.getAccessToken()
         val response = if (anonymousToken != null) {
-            authApi.mergeAccount(MergeAccountRequest(anonymousToken, idToken))
+            authApi.mergeAccount(MergeAccountRequest(anonymousToken, idToken, "google"))
         } else {
             authApi.loginWithGoogle(GoogleAuthRequest(idToken))
         }
@@ -39,8 +41,8 @@ class AuthManager(
         val newState = AuthState.Authenticated(
             AuthUser(
                 userId = response.userId,
-                email = null,
-                displayName = null,
+                email = response.email,
+                displayName = response.displayName,
                 provider = AuthProvider.GOOGLE,
                 isAnonymous = false,
             )
@@ -48,16 +50,13 @@ class AuthManager(
         _authState.value = newState
         newState
     }.onFailure { e ->
-        _authState.value = AuthState.Error(
-            if (isNetworkError(e)) AuthErrorType.NetworkError
-            else AuthErrorType.Unknown(e.message ?: "sign_in_failed")
-        )
+        _authState.value = AuthState.Error(mapAuthError(e))
     }
 
     suspend fun signInWithApple(identityToken: String, name: String?): Result<AuthState> = runCatching {
         val anonymousToken = tokenManager.getAccessToken()
         val response = if (anonymousToken != null) {
-            authApi.mergeAccount(MergeAccountRequest(anonymousToken, identityToken))
+            authApi.mergeAccount(MergeAccountRequest(anonymousToken, identityToken, "apple"))
         } else {
             authApi.loginWithApple(AppleAuthRequest(identityToken, name))
         }
@@ -65,8 +64,8 @@ class AuthManager(
         val newState = AuthState.Authenticated(
             AuthUser(
                 userId = response.userId,
-                email = null,
-                displayName = name,
+                email = response.email,
+                displayName = response.displayName ?: name,
                 provider = AuthProvider.APPLE,
                 isAnonymous = false,
             )
@@ -74,10 +73,7 @@ class AuthManager(
         _authState.value = newState
         newState
     }.onFailure { e ->
-        _authState.value = AuthState.Error(
-            if (isNetworkError(e)) AuthErrorType.NetworkError
-            else AuthErrorType.Unknown(e.message ?: "sign_in_failed")
-        )
+        _authState.value = AuthState.Error(mapAuthError(e))
     }
 
     suspend fun signOut() {
@@ -92,6 +88,12 @@ class AuthManager(
 
     fun onSessionExpired() {
         _authState.value = AuthState.Error(AuthErrorType.SessionExpired)
+    }
+
+    private fun mapAuthError(e: Throwable): AuthErrorType = when {
+        isNetworkError(e) -> AuthErrorType.NetworkError
+        e is ClientRequestException && e.response.status == HttpStatusCode.Conflict -> AuthErrorType.AccountAlreadyExists
+        else -> AuthErrorType.Unknown(e.message ?: "sign_in_failed")
     }
 
     private fun isNetworkError(e: Throwable): Boolean =

@@ -27,14 +27,18 @@ data class RefreshTokenRequest(
 @Serializable
 data class MergeAccountRequest(
     @SerialName("anonymous_token") val anonymousToken: String,
-    @SerialName("provider_token") val providerToken: String
+    @SerialName("provider_token") val providerToken: String,
+    val provider: String
 )
 
 @Serializable
 data class AuthResponse(
     @SerialName("access_token")  val accessToken: String,
     @SerialName("refresh_token") val refreshToken: String,
-    @SerialName("user_id")       val userId: String
+    @SerialName("user_id")       val userId: String,
+    val email: String? = null,
+    @SerialName("display_name") val displayName: String? = null,
+    val provider: String? = null
 )
 
 @Serializable
